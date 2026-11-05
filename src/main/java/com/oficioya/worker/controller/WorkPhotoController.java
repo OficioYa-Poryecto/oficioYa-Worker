@@ -1,6 +1,8 @@
 package com.oficioya.worker.controller;
 
-import com.oficioya.worker.model.WorkPhotoModel;
+import com.oficioya.worker.dto.WorkPhotoRequest;
+import com.oficioya.worker.dto.WorkPhotoResponse;
+import com.oficioya.worker.mapper.WorkPhotoDtoMapper;
 import com.oficioya.worker.service.WorkPhotoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,23 +20,26 @@ import java.util.List;
 public class WorkPhotoController {
 
     private final WorkPhotoService photoService;
+    private final WorkPhotoDtoMapper photoDtoMapper;
 
-    public WorkPhotoController(WorkPhotoService photoService) {
+    public WorkPhotoController(WorkPhotoService photoService, WorkPhotoDtoMapper photoDtoMapper) {
         this.photoService = photoService;
+        this.photoDtoMapper = photoDtoMapper;
     }
 
     @GetMapping
     @Operation(summary = "Listar fotos", description = "Devuelve las fotos de trabajos del trabajador")
-    public ResponseEntity<List<WorkPhotoModel>> findAll(@PathVariable Long workerId) {
-        return ResponseEntity.ok(photoService.findAll(workerId));
+    public ResponseEntity<List<WorkPhotoResponse>> findAll(@PathVariable Long workerId) {
+        return ResponseEntity.ok(photoDtoMapper.toResponseList(photoService.findAll(workerId)));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PostMapping
     @Operation(summary = "Agregar foto", description = "Registra una foto de un trabajo realizado")
-    public ResponseEntity<WorkPhotoModel> create(@PathVariable Long workerId,
-                                                 @Valid @RequestBody WorkPhotoModel model) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(photoService.create(workerId, model));
+    public ResponseEntity<WorkPhotoResponse> create(@PathVariable Long workerId,
+                                                    @Valid @RequestBody WorkPhotoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(photoDtoMapper.toResponse(photoService.create(workerId, photoDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")

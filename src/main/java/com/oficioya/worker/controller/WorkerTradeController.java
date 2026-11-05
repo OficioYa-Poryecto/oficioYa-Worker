@@ -1,6 +1,9 @@
 package com.oficioya.worker.controller;
 
-import com.oficioya.worker.model.WorkerTradeModel;
+import com.oficioya.worker.dto.WorkerTradeRateRequest;
+import com.oficioya.worker.dto.WorkerTradeRequest;
+import com.oficioya.worker.dto.WorkerTradeResponse;
+import com.oficioya.worker.mapper.WorkerTradeDtoMapper;
 import com.oficioya.worker.service.WorkerTradeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -16,26 +19,30 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class WorkerTradeController {
 
     private final WorkerTradeService workerTradeService;
+    private final WorkerTradeDtoMapper workerTradeDtoMapper;
 
-    public WorkerTradeController(WorkerTradeService workerTradeService) {
+    public WorkerTradeController(WorkerTradeService workerTradeService, WorkerTradeDtoMapper workerTradeDtoMapper) {
         this.workerTradeService = workerTradeService;
+        this.workerTradeDtoMapper = workerTradeDtoMapper;
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PostMapping("/trades")
     @Operation(summary = "Agregar oficio secundario", description = "Asocia un oficio secundario al trabajador")
-    public ResponseEntity<WorkerTradeModel> addSecondary(@PathVariable Long workerId,
-                                                         @Valid @RequestBody WorkerTradeModel model) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(workerTradeService.addSecondary(workerId, model));
+    public ResponseEntity<WorkerTradeResponse> addSecondary(@PathVariable Long workerId,
+                                                            @Valid @RequestBody WorkerTradeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(workerTradeDtoMapper.toResponse(
+                workerTradeService.addSecondary(workerId, workerTradeDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PutMapping("/trades/{workerTradeId}")
-    @Operation(summary = "Actualizar oficio del trabajador", description = "Modifica la información de un oficio asociado al trabajador")
-    public ResponseEntity<WorkerTradeModel> update(@PathVariable Long workerId,
-                                                   @PathVariable Long workerTradeId,
-                                                   @Valid @RequestBody WorkerTradeModel model) {
-        return ResponseEntity.ok(workerTradeService.update(workerId, workerTradeId, model));
+    @Operation(summary = "Actualizar tarifa del oficio", description = "Modifica la tarifa de un oficio asociado al trabajador")
+    public ResponseEntity<WorkerTradeResponse> update(@PathVariable Long workerId,
+                                                      @PathVariable Long workerTradeId,
+                                                      @Valid @RequestBody WorkerTradeRateRequest request) {
+        return ResponseEntity.ok(workerTradeDtoMapper.toResponse(
+                workerTradeService.update(workerId, workerTradeId, workerTradeDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
@@ -50,8 +57,8 @@ public class WorkerTradeController {
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PutMapping("/primary-trade/{workerTradeId}")
     @Operation(summary = "Cambiar oficio principal", description = "Define cuál de los oficios del trabajador es el principal")
-    public ResponseEntity<WorkerTradeModel> changePrimary(@PathVariable Long workerId,
-                                                          @PathVariable Long workerTradeId) {
-        return ResponseEntity.ok(workerTradeService.changePrimary(workerId, workerTradeId));
+    public ResponseEntity<WorkerTradeResponse> changePrimary(@PathVariable Long workerId,
+                                                             @PathVariable Long workerTradeId) {
+        return ResponseEntity.ok(workerTradeDtoMapper.toResponse(workerTradeService.changePrimary(workerId, workerTradeId)));
     }
 }

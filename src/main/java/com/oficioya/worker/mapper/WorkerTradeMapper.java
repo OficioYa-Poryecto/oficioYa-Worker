@@ -2,12 +2,13 @@ package com.oficioya.worker.mapper;
 
 import com.oficioya.worker.entity.WorkerTrade;
 import com.oficioya.worker.model.WorkerTradeModel;
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = TradeMapper.class)
+@Mapper(componentModel = "spring", uses = TradeMapper.class, injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface WorkerTradeMapper {
     WorkerTradeModel toModel(WorkerTrade entity);
 

@@ -150,15 +150,13 @@ class WorkerAuthorizationTest {
     private String perfilJson(Long userId) {
         return """
                 {"userId": %d, "availableNow": false,
-                 "primaryTrade": {"approxRate": 50000, "rateUnit": "PER_JOB",
-                                  "trade": {"id": %d, "name": "Plomería", "active": true,
-                                            "category": {"id": %d, "name": "Hogar"}}}}
-                """.formatted(userId, plomeria.getId(), plomeria.getCategory().getId());
+                 "primaryTrade": {"tradeId": %d, "approxRate": 50000, "rateUnit": "PER_JOB"}}
+                """.formatted(userId, plomeria.getId());
     }
 
     private String oficioJson() {
         return """
-                {"name": "Electricidad", "active": true, "category": {"id": %d, "name": "Hogar"}}
+                {"name": "Electricidad", "active": true, "categoryId": %d}
                 """.formatted(plomeria.getCategory().getId());
     }
 }

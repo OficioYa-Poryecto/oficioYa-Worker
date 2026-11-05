@@ -1,6 +1,8 @@
 package com.oficioya.worker.controller;
 
-import com.oficioya.worker.model.AvailabilitySlotModel;
+import com.oficioya.worker.dto.AvailabilitySlotRequest;
+import com.oficioya.worker.dto.AvailabilitySlotResponse;
+import com.oficioya.worker.mapper.AvailabilitySlotDtoMapper;
 import com.oficioya.worker.service.AvailabilitySlotService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,32 +20,36 @@ import java.util.List;
 public class AvailabilitySlotController {
 
     private final AvailabilitySlotService slotService;
+    private final AvailabilitySlotDtoMapper slotDtoMapper;
 
-    public AvailabilitySlotController(AvailabilitySlotService slotService) {
+    public AvailabilitySlotController(AvailabilitySlotService slotService, AvailabilitySlotDtoMapper slotDtoMapper) {
         this.slotService = slotService;
+        this.slotDtoMapper = slotDtoMapper;
     }
 
     @GetMapping
     @Operation(summary = "Listar disponibilidad", description = "Devuelve las franjas de disponibilidad del trabajador")
-    public ResponseEntity<List<AvailabilitySlotModel>> findAll(@PathVariable Long workerId) {
-        return ResponseEntity.ok(slotService.findAll(workerId));
+    public ResponseEntity<List<AvailabilitySlotResponse>> findAll(@PathVariable Long workerId) {
+        return ResponseEntity.ok(slotDtoMapper.toResponseList(slotService.findAll(workerId)));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PostMapping
     @Operation(summary = "Crear franja de disponibilidad", description = "Registra una nueva franja para el trabajador")
-    public ResponseEntity<AvailabilitySlotModel> create(@PathVariable Long workerId,
-                                                        @Valid @RequestBody AvailabilitySlotModel model) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(slotService.create(workerId, model));
+    public ResponseEntity<AvailabilitySlotResponse> create(@PathVariable Long workerId,
+                                                           @Valid @RequestBody AvailabilitySlotRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(slotDtoMapper.toResponse(slotService.create(workerId, slotDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PutMapping("/{slotId}")
     @Operation(summary = "Actualizar franja", description = "Modifica una franja de disponibilidad existente")
-    public ResponseEntity<AvailabilitySlotModel> update(@PathVariable Long workerId,
-                                                        @PathVariable Long slotId,
-                                                        @Valid @RequestBody AvailabilitySlotModel model) {
-        return ResponseEntity.ok(slotService.update(workerId, slotId, model));
+    public ResponseEntity<AvailabilitySlotResponse> update(@PathVariable Long workerId,
+                                                           @PathVariable Long slotId,
+                                                           @Valid @RequestBody AvailabilitySlotRequest request) {
+        return ResponseEntity.ok(
+                slotDtoMapper.toResponse(slotService.update(workerId, slotId, slotDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")

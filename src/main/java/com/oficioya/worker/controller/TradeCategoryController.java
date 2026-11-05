@@ -1,6 +1,8 @@
 package com.oficioya.worker.controller;
 
-import com.oficioya.worker.model.TradeCategoryModel;
+import com.oficioya.worker.dto.TradeCategoryRequest;
+import com.oficioya.worker.dto.TradeCategoryResponse;
+import com.oficioya.worker.mapper.TradeCategoryDtoMapper;
 import com.oficioya.worker.service.TradeCategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,21 +20,24 @@ import java.util.List;
 public class TradeCategoryController {
 
     private final TradeCategoryService categoryService;
+    private final TradeCategoryDtoMapper categoryDtoMapper;
 
-    public TradeCategoryController(TradeCategoryService categoryService) {
+    public TradeCategoryController(TradeCategoryService categoryService, TradeCategoryDtoMapper categoryDtoMapper) {
         this.categoryService = categoryService;
+        this.categoryDtoMapper = categoryDtoMapper;
     }
 
     @GetMapping
     @Operation(summary = "Listar categorías", description = "Devuelve todas las categorías de oficios")
-    public ResponseEntity<List<TradeCategoryModel>> findAll() {
-        return ResponseEntity.ok(categoryService.findAll());
+    public ResponseEntity<List<TradeCategoryResponse>> findAll() {
+        return ResponseEntity.ok(categoryDtoMapper.toResponseList(categoryService.findAll()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @Operation(summary = "Crear categoría", description = "Registra una nueva categoría de oficios")
-    public ResponseEntity<TradeCategoryModel> create(@Valid @RequestBody TradeCategoryModel model) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.create(model));
+    public ResponseEntity<TradeCategoryResponse> create(@Valid @RequestBody TradeCategoryRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(categoryDtoMapper.toResponse(categoryService.create(categoryDtoMapper.toModel(request))));
     }
 }
