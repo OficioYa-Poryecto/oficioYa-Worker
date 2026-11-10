@@ -103,7 +103,7 @@ public class AvailabilitySlotService {
     }
 
     private boolean overlaps(AvailabilitySlot a, AvailabilitySlot b) {
-        return weekDay(a) == weekDay(b)
+        return weekDay(a).equals(weekDay(b))
                 && !a.getStartDate().isAfter(lastDate(b))
                 && !b.getStartDate().isAfter(lastDate(a))
                 && a.getStartTime().isBefore(b.getEndTime())
