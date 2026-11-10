@@ -32,6 +32,10 @@
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<lombok.version>1.18.46</lombok.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<sonar.projectKey>oficioya-worker</sonar.projectKey>
+		<sonar.projectName>oficioya-worker</sonar.projectName>
+		<sonar.host.url>http://localhost:9000</sonar.host.url>
+		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 
 	<dependencies>
@@ -212,6 +216,14 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+
+			<!-- SonarQube -->
+
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>5.7.0.6970</version>
 			</plugin>
 
 		</plugins>

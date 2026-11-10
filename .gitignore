@@ -37,3 +37,6 @@ logs/
 
 ### Secretos ###
 .env
+
+### SonarQube ###
+.sonar/

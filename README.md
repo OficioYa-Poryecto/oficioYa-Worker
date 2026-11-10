@@ -80,9 +80,39 @@ Todos los errores responden con el mismo formato:
 ./mvnw clean verify
 ```
 
-- El reporte queda en `target/site/jacoco/index.html`.
+- El reporte queda en `target/site/jacoco/index.html` (HTML) y `target/site/jacoco/jacoco.xml` (el que lee SonarQube).
 - `verify` falla si la cobertura de líneas baja del 80%.
 - `lombok.config` evita que se cuente el código que genera Lombok.
+
+### Análisis con SonarQube (local)
+
+1. Levantar SonarQube con Docker (solo la primera vez):
+
+```powershell
+docker run -d --name sonarqube -p 9000:9000 -v sonarqube_data:/opt/sonarqube/data sonarqube:community
+```
+
+2. Entrar a http://localhost:9000 (usuario `admin`, contraseña `admin`; pide cambiarla en el primer ingreso).
+3. Crear el proyecto con **Create Project > Local project**. El **project key** debe ser exactamente `oficioya-worker`.
+4. Generar un token (**My Account > Security**) y guardarlo temporalmente en una variable de entorno de la terminal (se pierde al cerrarla, así que se repite en cada terminal nueva):
+
+```powershell
+$env:SONAR_TOKEN="TU_TOKEN"
+```
+
+5. Ejecutar el análisis desde la raíz del microservicio worker (donde está el `pom.xml`):
+
+```powershell
+.\mvnw clean verify sonar:sonar "-Dsonar.token=$env:SONAR_TOKEN"
+```
+
+6. Ver resultados en http://localhost:9000/dashboard?id=oficioya-worker.
+
+Notas:
+- Nunca subir el token al repositorio.
+- La cobertura sale vacía si no existe `target/site/jacoco/jacoco.xml`; por eso se usa `verify`, no solo `sonar:sonar`.
+- Si el puerto 9000 está ocupado, SonarQube no abre: liberar el puerto o detener el otro servicio.
+- El token solo dura mientras la terminal esté abierta; si el análisis falla por autenticación, volver a definir `SONAR_TOKEN`.
 
 > Si el proyecto está dentro de OneDrive, la sincronización puede corromper los `.class` de `target/` y producir
 > fallos intermitentes (`NoClassDefFoundError`, beans de mappers no encontrados). Excluye `target/` de la
