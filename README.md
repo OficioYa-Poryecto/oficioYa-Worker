@@ -74,6 +74,16 @@ Todos los errores responden con el mismo formato:
 ./mvnw clean test
 ```
 
+### Cobertura (JaCoCo)
+
+```bash
+./mvnw clean verify
+```
+
+- El reporte queda en `target/site/jacoco/index.html`.
+- `verify` falla si la cobertura de líneas baja del 80%.
+- `lombok.config` evita que se cuente el código que genera Lombok.
+
 > Si el proyecto está dentro de OneDrive, la sincronización puede corromper los `.class` de `target/` y producir
 > fallos intermitentes (`NoClassDefFoundError`, beans de mappers no encontrados). Excluye `target/` de la
 > sincronización o trabaja el proyecto fuera de OneDrive.
