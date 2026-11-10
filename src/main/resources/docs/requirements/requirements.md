@@ -11,25 +11,23 @@ El sistema de OficioYa debe tener la capacidad de:
 2. Definir categorías especiales de oficios con campos propios (profesores, cuidadores de mascotas, técnicos).
 3. Asociar a un trabajador su oficio principal y sus oficios secundarios.
 4. Registrar la tarifa aproximada de un trabajador por cada oficio que ofrece.
-5. Definir las zonas de cobertura (barrios) disponibles en la plataforma.
-6. Permitir al trabajador definir su área de cobertura dentro de esas zonas.
-7. Permitir al trabajador especificar su disponibilidad semanal y el estado "disponible ahora".
-8. Permitir al contratante consultar el perfil de un trabajador (oficios, tarifa, cobertura, disponibilidad).
-9. Exponer una consulta de trabajadores para que otros dominios puedan filtrarlos por oficio, zona, tarifa y disponibilidad.
-10. Configurar disponibilidad fija o repetitiva
+5. Permitir al trabajador definir su área de cobertura dentro de esas zonas.
+6. Permitir al trabajador especificar su disponibilidad semanal y el estado "disponible ahora".
+7. Permitir al contratante consultar el perfil de un trabajador (oficios, tarifa, cobertura, disponibilidad).
+8. Exponer una consulta de trabajadores para que otros dominios puedan filtrarlos por oficio, zona, tarifa y disponibilidad.
+9. Configurar disponibilidad fija o repetitiva
 
 ### 1.2 Requerimientos no funcionales
 
 El sistema de OficioYa debe tener:
 
 1. Documentar cómo otros dominios pueden consultar la información de trabajadores, para que si algo cambia en Worker, no se rompa lo que usan otros equipos.
-2. Actualización constante del estado de disponibilidad del trabajador.
-3. Se debe poder agregar nuevos oficios o categorías fácilmente sin tener que rediseñar todo el sistema cada vez que se necesite uno nuevo.
-5. Las consultas que hacen otros dominios deben responde sin demoras que afecten la experiencia de búsqueda.
-6. El formulario para registrar oficios, tarifa y cobertura debe ser fácil de usar.
-7. Cobertura de pruebas unitarias minima del 80%.
-8. La interfaz de búsqueda debe ser responisve.
-9. El sistema debe registrar logs de cada búsqueda realizada.
+2. Se debe poder agregar nuevos oficios o categorías fácilmente sin tener que rediseñar todo el sistema cada vez que se necesite uno nuevo.
+3. Las consultas que hacen otros dominios deben responde sin demoras que afecten la experiencia de búsqueda.
+4. El formulario para registrar oficios, tarifa y cobertura debe ser fácil de usar.
+5. Cobertura de pruebas unitarias minima del 80%.
+6. La interfaz de búsqueda debe ser responisve.
+7. El sistema debe registrar logs de cada búsqueda realizada.
 
 ## 2. Diagramas de caso de uso
 
