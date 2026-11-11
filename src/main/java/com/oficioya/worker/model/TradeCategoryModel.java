@@ -2,8 +2,10 @@ package com.oficioya.worker.model;
 
 import jakarta.validation.constraints.NotBlank;
 
+import java.util.UUID;
+
 public class TradeCategoryModel {
-    private Long id;
+    private UUID id;
     @NotBlank
     private String name;
     private String detail;
@@ -11,17 +13,17 @@ public class TradeCategoryModel {
     public TradeCategoryModel() {
     }
 
-    public TradeCategoryModel(Long id, String name, String detail) {
+    public TradeCategoryModel(UUID id, String name, String detail) {
         this.id = id;
         this.name = name;
         this.detail = detail;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

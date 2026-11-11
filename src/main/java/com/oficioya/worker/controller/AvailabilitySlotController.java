@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/workers/{workerId}/availability-slots")
@@ -29,14 +30,14 @@ public class AvailabilitySlotController {
 
     @GetMapping
     @Operation(summary = "Listar disponibilidad", description = "Devuelve las franjas de disponibilidad del trabajador")
-    public ResponseEntity<List<AvailabilitySlotResponse>> findAll(@PathVariable Long workerId) {
+    public ResponseEntity<List<AvailabilitySlotResponse>> findAll(@PathVariable UUID workerId) {
         return ResponseEntity.ok(slotDtoMapper.toResponseList(slotService.findAll(workerId)));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PostMapping
     @Operation(summary = "Crear franja de disponibilidad", description = "Registra una nueva franja para el trabajador")
-    public ResponseEntity<AvailabilitySlotResponse> create(@PathVariable Long workerId,
+    public ResponseEntity<AvailabilitySlotResponse> create(@PathVariable UUID workerId,
                                                            @Valid @RequestBody AvailabilitySlotRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(slotDtoMapper.toResponse(slotService.create(workerId, slotDtoMapper.toModel(request))));
@@ -45,8 +46,8 @@ public class AvailabilitySlotController {
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PutMapping("/{slotId}")
     @Operation(summary = "Actualizar franja", description = "Modifica una franja de disponibilidad existente")
-    public ResponseEntity<AvailabilitySlotResponse> update(@PathVariable Long workerId,
-                                                           @PathVariable Long slotId,
+    public ResponseEntity<AvailabilitySlotResponse> update(@PathVariable UUID workerId,
+                                                           @PathVariable UUID slotId,
                                                            @Valid @RequestBody AvailabilitySlotRequest request) {
         return ResponseEntity.ok(
                 slotDtoMapper.toResponse(slotService.update(workerId, slotId, slotDtoMapper.toModel(request))));
@@ -55,7 +56,7 @@ public class AvailabilitySlotController {
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @DeleteMapping("/{slotId}")
     @Operation(summary = "Eliminar franja", description = "Elimina una franja de disponibilidad del trabajador")
-    public ResponseEntity<Void> delete(@PathVariable Long workerId, @PathVariable Long slotId) {
+    public ResponseEntity<Void> delete(@PathVariable UUID workerId, @PathVariable UUID slotId) {
         slotService.delete(workerId, slotId);
         return ResponseEntity.noContent().build();
     }

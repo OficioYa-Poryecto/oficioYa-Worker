@@ -3,9 +3,10 @@ package com.oficioya.worker.model;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 public class AvailabilitySlotModel {
-    private Long id;
+    private UUID id;
     private RecurrenceType recurrenceType;
     private DayOfWeek dayOfWeek;
     private LocalDate startDate;
@@ -16,7 +17,7 @@ public class AvailabilitySlotModel {
     public AvailabilitySlotModel() {
     }
 
-    public AvailabilitySlotModel(Long id, RecurrenceType recurrenceType, LocalDate startDate, LocalDate endDate,
+    public AvailabilitySlotModel(UUID id, RecurrenceType recurrenceType, LocalDate startDate, LocalDate endDate,
                                  DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime) {
         this.id = id;
         this.recurrenceType = recurrenceType;
@@ -27,11 +28,11 @@ public class AvailabilitySlotModel {
         this.endTime = endTime;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

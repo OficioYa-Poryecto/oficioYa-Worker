@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -34,6 +35,12 @@ class AvailabilitySlotServiceTest {
     private static final LocalDate LUNES = LocalDate.of(2026, 11, 2);
     private static final LocalDate OTRO_LUNES = LocalDate.of(2026, 11, 9);
     private static final LocalDate MARTES = LocalDate.of(2026, 11, 10);
+    private static final UUID WORKER_ID = UUID.randomUUID();
+    private static final UUID OTHER_WORKER_ID = UUID.randomUUID();
+    private static final UUID UNKNOWN_WORKER_ID = UUID.randomUUID();
+    private static final UUID SLOT_ID = UUID.randomUUID();
+    private static final UUID OTHER_SLOT_ID = UUID.randomUUID();
+    private static final UUID SAVED_SLOT_ID = UUID.randomUUID();
 
     @Mock private WorkerRepository workerRepository;
     @Mock private AvailabilitySlotRepository slotRepository;
@@ -45,7 +52,7 @@ class AvailabilitySlotServiceTest {
     void setUp() {
         slotService = new AvailabilitySlotService(workerRepository, slotRepository, new AvailabilitySlotMapperImpl());
         worker = new Worker();
-        worker.setId(1L);
+        worker.setId(WORKER_ID);
         worker.setStatus(WorkerStatus.ACTIVE);
     }
 
@@ -54,7 +61,7 @@ class AvailabilitySlotServiceTest {
                 LocalTime.of(from, 0), LocalTime.of(to, 0));
     }
 
-    private AvailabilitySlot existingMondays(Long id) {
+    private AvailabilitySlot existingMondays(UUID id) {
         AvailabilitySlot slot = new AvailabilitySlot();
         slot.setId(id);
         slot.setWorker(worker);
@@ -71,7 +78,7 @@ class AvailabilitySlotServiceTest {
         when(slotRepository.save(any(AvailabilitySlot.class))).thenAnswer(inv -> {
             AvailabilitySlot saved = inv.getArgument(0);
             if (saved.getId() == null) {
-                saved.setId(50L);
+                saved.setId(SAVED_SLOT_ID);
             }
             return saved;
         });
@@ -80,16 +87,16 @@ class AvailabilitySlotServiceTest {
     @Test
     @DisplayName("Crea una franja de fecha fija y descarta día de la semana y fecha final")
     void shouldCreateFixedSlot() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findByWorkerId(1L)).thenReturn(List.of());
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findByWorkerId(WORKER_ID)).thenReturn(List.of());
         saveReturnsArgument();
 
         AvailabilitySlotModel model = fixed(MARTES, 8, 12);
         model.setDayOfWeek(DayOfWeek.FRIDAY);
         model.setEndDate(MARTES.plusDays(3));
-        AvailabilitySlotModel result = slotService.create(1L, model);
+        AvailabilitySlotModel result = slotService.create(WORKER_ID, model);
 
-        assertEquals(50L, result.getId());
+        assertEquals(SAVED_SLOT_ID, result.getId());
         assertNull(result.getDayOfWeek());
         assertNull(result.getEndDate());
     }
@@ -97,93 +104,93 @@ class AvailabilitySlotServiceTest {
     @Test
     @DisplayName("Rechaza una franja cuya hora de inicio no es anterior a la de fin")
     void shouldRejectInvertedHours() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
 
-        assertThrows(IllegalArgumentException.class, () -> slotService.create(1L, fixed(MARTES, 12, 8)));
-        assertThrows(IllegalArgumentException.class, () -> slotService.create(1L, fixed(MARTES, 9, 9)));
+        assertThrows(IllegalArgumentException.class, () -> slotService.create(WORKER_ID, fixed(MARTES, 12, 8)));
+        assertThrows(IllegalArgumentException.class, () -> slotService.create(WORKER_ID, fixed(MARTES, 9, 9)));
         verify(slotRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("Una franja repetitiva exige día de la semana y fecha final")
     void shouldRequireDayAndEndDateForRecurring() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         AvailabilitySlotModel model = new AvailabilitySlotModel(null, RecurrenceType.RECURRING, LUNES, null,
                 null, LocalTime.of(8, 0), LocalTime.of(12, 0));
 
-        assertThrows(IllegalArgumentException.class, () -> slotService.create(1L, model));
+        assertThrows(IllegalArgumentException.class, () -> slotService.create(WORKER_ID, model));
         verify(slotRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("Una franja repetitiva no puede terminar antes de empezar")
     void shouldRejectRecurringEndingBeforeStart() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         AvailabilitySlotModel model = new AvailabilitySlotModel(null, RecurrenceType.RECURRING, LUNES,
                 LUNES.minusDays(1), DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(12, 0));
 
-        assertThrows(IllegalArgumentException.class, () -> slotService.create(1L, model));
+        assertThrows(IllegalArgumentException.class, () -> slotService.create(WORKER_ID, model));
     }
 
     @Test
     @DisplayName("Rechaza una franja que se cruza con otra del mismo trabajador")
     void shouldRejectOverlappingSlot() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findByWorkerId(1L)).thenReturn(List.of(existingMondays(7L)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findByWorkerId(WORKER_ID)).thenReturn(List.of(existingMondays(SLOT_ID)));
 
-        assertThrows(BusinessRuleException.class, () -> slotService.create(1L, fixed(OTRO_LUNES, 10, 11)));
+        assertThrows(BusinessRuleException.class, () -> slotService.create(WORKER_ID, fixed(OTRO_LUNES, 10, 11)));
         verify(slotRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("Acepta una franja en otro día aunque el horario coincida")
     void shouldAcceptSlotOnAnotherDay() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findByWorkerId(1L)).thenReturn(List.of(existingMondays(7L)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findByWorkerId(WORKER_ID)).thenReturn(List.of(existingMondays(SLOT_ID)));
         saveReturnsArgument();
 
-        assertNotNull(slotService.create(1L, fixed(MARTES, 10, 11)).getId());
+        assertNotNull(slotService.create(WORKER_ID, fixed(MARTES, 10, 11)).getId());
     }
 
     @Test
     @DisplayName("Al actualizar una franja no la compara consigo misma")
     void shouldUpdateSlotIgnoringItself() {
-        AvailabilitySlot existing = existingMondays(7L);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findById(7L)).thenReturn(Optional.of(existing));
-        when(slotRepository.findByWorkerId(1L)).thenReturn(List.of(existing));
+        AvailabilitySlot existing = existingMondays(SLOT_ID);
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(existing));
+        when(slotRepository.findByWorkerId(WORKER_ID)).thenReturn(List.of(existing));
         saveReturnsArgument();
 
         AvailabilitySlotModel changes = new AvailabilitySlotModel(null, RecurrenceType.RECURRING, LUNES,
                 LUNES.plusMonths(1), DayOfWeek.MONDAY, LocalTime.of(9, 0), LocalTime.of(13, 0));
-        AvailabilitySlotModel result = slotService.update(1L, 7L, changes);
+        AvailabilitySlotModel result = slotService.update(WORKER_ID, SLOT_ID, changes);
 
         assertEquals(LocalTime.of(9, 0), result.getStartTime());
-        assertEquals(7L, result.getId());
+        assertEquals(SLOT_ID, result.getId());
     }
 
     @Test
     @DisplayName("No modifica una franja de otro trabajador")
     void shouldNotTouchSlotOfAnotherWorker() {
         Worker otro = new Worker();
-        otro.setId(2L);
-        AvailabilitySlot ajena = existingMondays(8L);
+        otro.setId(OTHER_WORKER_ID);
+        AvailabilitySlot ajena = existingMondays(OTHER_SLOT_ID);
         ajena.setWorker(otro);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findById(8L)).thenReturn(Optional.of(ajena));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findById(OTHER_SLOT_ID)).thenReturn(Optional.of(ajena));
 
-        assertThrows(ResourceNotFoundException.class, () -> slotService.delete(1L, 8L));
+        assertThrows(ResourceNotFoundException.class, () -> slotService.delete(WORKER_ID, OTHER_SLOT_ID));
         verify(slotRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("Elimina una franja propia")
     void shouldDeleteOwnSlot() {
-        AvailabilitySlot existing = existingMondays(7L);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(slotRepository.findById(7L)).thenReturn(Optional.of(existing));
+        AvailabilitySlot existing = existingMondays(SLOT_ID);
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(existing));
 
-        slotService.delete(1L, 7L);
+        slotService.delete(WORKER_ID, SLOT_ID);
 
         verify(slotRepository).delete(existing);
     }
@@ -192,17 +199,17 @@ class AvailabilitySlotServiceTest {
     @DisplayName("Un trabajador pausado no puede modificar su disponibilidad")
     void shouldRejectPausedWorker() {
         worker.setStatus(WorkerStatus.PAUSED);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
 
-        assertThrows(BusinessRuleException.class, () -> slotService.create(1L, fixed(MARTES, 8, 9)));
+        assertThrows(BusinessRuleException.class, () -> slotService.create(WORKER_ID, fixed(MARTES, 8, 9)));
         verifyNoInteractions(slotRepository);
     }
 
     @Test
     @DisplayName("Listar la disponibilidad de un trabajador inexistente lanza ResourceNotFoundException")
     void shouldFailListingUnknownWorker() {
-        when(workerRepository.findById(99L)).thenReturn(Optional.empty());
+        when(workerRepository.findById(UNKNOWN_WORKER_ID)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> slotService.findAll(99L));
+        assertThrows(ResourceNotFoundException.class, () -> slotService.findAll(UNKNOWN_WORKER_ID));
     }
 }

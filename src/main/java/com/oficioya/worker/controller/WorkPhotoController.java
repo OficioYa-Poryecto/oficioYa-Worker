@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/workers/{workerId}/photos")
@@ -29,14 +30,14 @@ public class WorkPhotoController {
 
     @GetMapping
     @Operation(summary = "Listar fotos", description = "Devuelve las fotos de trabajos del trabajador")
-    public ResponseEntity<List<WorkPhotoResponse>> findAll(@PathVariable Long workerId) {
+    public ResponseEntity<List<WorkPhotoResponse>> findAll(@PathVariable UUID workerId) {
         return ResponseEntity.ok(photoDtoMapper.toResponseList(photoService.findAll(workerId)));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @PostMapping
     @Operation(summary = "Agregar foto", description = "Registra una foto de un trabajo realizado")
-    public ResponseEntity<WorkPhotoResponse> create(@PathVariable Long workerId,
+    public ResponseEntity<WorkPhotoResponse> create(@PathVariable UUID workerId,
                                                     @Valid @RequestBody WorkPhotoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(photoDtoMapper.toResponse(photoService.create(workerId, photoDtoMapper.toModel(request))));
@@ -45,7 +46,7 @@ public class WorkPhotoController {
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")
     @DeleteMapping("/{photoId}")
     @Operation(summary = "Eliminar foto", description = "Elimina una foto del portafolio del trabajador")
-    public ResponseEntity<Void> delete(@PathVariable Long workerId, @PathVariable Long photoId) {
+    public ResponseEntity<Void> delete(@PathVariable UUID workerId, @PathVariable UUID photoId) {
         photoService.delete(workerId, photoId);
         return ResponseEntity.noContent().build();
     }

@@ -1,4 +1,6 @@
 package com.oficioya.worker.dto;
 
-public record TradeCategoryResponse(Long id, String name, String detail) {
+import java.util.UUID;
+
+public record TradeCategoryResponse(UUID id, String name, String detail) {
 }

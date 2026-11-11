@@ -5,18 +5,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import jakarta.validation.constraints.*;
 import jakarta.validation.*;
 
+
 public class WorkerModel {
 
-    private Long id;
+    private UUID id;
     @NotNull
     private Long userId;
     private WorkerStatus status;
     private boolean availableNow;
-    private Set<Long> zoneIds = new HashSet<>();
+    private Set<Long> zoneIds = new HashSet<>();    
     @NotNull
     @Valid
     private WorkerTradeModel primaryTrade;
@@ -31,18 +33,18 @@ public class WorkerModel {
         this.secondaryTrades = new ArrayList<>();
     }
 
-    public WorkerModel(Long id, Long userId, WorkerTradeModel primaryTrade) {
+    public WorkerModel(UUID id, Long userId, WorkerTradeModel primaryTrade) {
         this();
         this.id = id;
         this.userId = userId;
         this.primaryTrade = primaryTrade;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -114,11 +116,11 @@ public class WorkerModel {
         secondaryTrades.add(trade);
     }
 
-    public Optional<WorkerTradeModel> getSecondaryTradeById(Long workerTradeId) {
+    public Optional<WorkerTradeModel> getSecondaryTradeById(UUID workerTradeId) {
         return secondaryTrades.stream().filter(t -> t.getId().equals(workerTradeId)).findFirst();
     }
 
-    public boolean removeSecondaryTradeById(Long workerTradeId) {
+    public boolean removeSecondaryTradeById(UUID workerTradeId) {
         return secondaryTrades.removeIf(t -> t.getId().equals(workerTradeId));
     }
 
@@ -126,11 +128,11 @@ public class WorkerModel {
         slots.add(slot);
     }
 
-    public Optional<AvailabilitySlotModel> getSlotById(Long slotId) {
+    public Optional<AvailabilitySlotModel> getSlotById(UUID slotId) {
         return slots.stream().filter(s -> s.getId().equals(slotId)).findFirst();
     }
 
-    public boolean removeSlotById(Long slotId) {
+    public boolean removeSlotById(UUID slotId) {
         return slots.removeIf(s -> s.getId().equals(slotId));
     }
 
@@ -138,11 +140,11 @@ public class WorkerModel {
         photos.add(photo);
     }
 
-    public Optional<WorkPhotoModel> getPhotoById(Long photoId) {
+    public Optional<WorkPhotoModel> getPhotoById(UUID photoId) {
         return photos.stream().filter(p -> p.getId().equals(photoId)).findFirst();
     }
 
-    public boolean removePhotoById(Long photoId) {
+    public boolean removePhotoById(UUID photoId) {
         return photos.removeIf(p -> p.getId().equals(photoId));
     }
 

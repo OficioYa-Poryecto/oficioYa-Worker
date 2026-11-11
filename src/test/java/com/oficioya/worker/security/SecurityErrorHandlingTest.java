@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -35,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Transactional
 class SecurityErrorHandlingTest {
+
+    private static final UUID UNKNOWN_TRADE_ID = UUID.randomUUID();
 
     @Autowired
     MockMvc mockMvc;
@@ -138,12 +141,12 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Recurso inexistente: 404 con el mismo formato que 401 y 403")
     void noEncontradoUsaElMismoFormato() throws Exception {
-        mockMvc.perform(get("/api/v1/trades/999999").header("Authorization", bearer(20L, "CONTRATANTE")))
+        mockMvc.perform(get("/api/v1/trades/" + UNKNOWN_TRADE_ID).header("Authorization", bearer(20L, "CONTRATANTE")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message").value("Trade not found: 999999"))
-                .andExpect(jsonPath("$.path").value("/api/v1/trades/999999"));
+                .andExpect(jsonPath("$.message").value("Trade not found: " + UNKNOWN_TRADE_ID))
+                .andExpect(jsonPath("$.path").value("/api/v1/trades/" + UNKNOWN_TRADE_ID));
     }
 
     @Test
@@ -180,11 +183,11 @@ class SecurityErrorHandlingTest {
         Worker worker = new Worker();
         worker.setUserId(10L);
         worker.setStatus(WorkerStatus.ACTIVE);
-        Long workerId = workerRepository.save(worker).getId();
+        UUID workerId = workerRepository.save(worker).getId();
 
         mockMvc.perform(get("/api/v1/workers/" + workerId).header("Authorization", bearer(20L, "CONTRATANTE")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(workerId))
+                .andExpect(jsonPath("$.id").value(workerId.toString()))
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.phone").doesNotExist())
                 .andExpect(content().string(not(containsString("email"))))

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class TradeService {
@@ -38,7 +39,7 @@ public class TradeService {
         return tradeMapper.toModelList(trades);
     }
 
-    public TradeModel findById(Long id) {
+    public TradeModel findById(UUID id) {
         log.debug("Looking for trade with id: {}", id);
         return tradeMapper.toModel(getTradeOrThrow(id));
     }
@@ -53,7 +54,7 @@ public class TradeService {
         return saved;
     }
 
-    public TradeModel update(Long id, TradeModel model) {
+    public TradeModel update(UUID id, TradeModel model) {
         Trade entity = getTradeOrThrow(id);
         entity.setName(model.getName());
         entity.setDescription(model.getDescription());
@@ -64,21 +65,21 @@ public class TradeService {
         return saved;
     }
 
-    public void deactivate(Long id) {
+    public void deactivate(UUID id) {
         Trade entity = getTradeOrThrow(id);
         entity.setActive(false);
         tradeRepository.save(entity);
         log.info("Trade deactivated: {}", id);
     }
 
-    private Trade getTradeOrThrow(Long id) {
+    private Trade getTradeOrThrow(UUID id) {
         return tradeRepository.findById(id).orElseThrow(() -> {
             log.warn("Trade not found: {}", id);
             return new ResourceNotFoundException("Trade not found: " + id);
         });
     }
 
-    private TradeCategory getCategoryOrThrow(Long id) {
+    private TradeCategory getCategoryOrThrow(UUID id) {
         return categoryRepository.findById(id).orElseThrow(() -> {
             log.warn("Trade category not found: {}", id);
             return new ResourceNotFoundException("Trade category not found: " + id);

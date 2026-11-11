@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,25 +22,27 @@ class DtoMapperTest {
     @Test
     @DisplayName("TradeRequest: categoryId pasa a category.id y active es true si no se envía")
     void shouldMapTradeRequest() {
-        TradeModel model = tradeDtoMapper.toModel(new TradeRequest("Plomería", null, null, 4L));
+        UUID categoryId = UUID.randomUUID();
+        TradeModel model = tradeDtoMapper.toModel(new TradeRequest("Plomería", null, null, categoryId));
 
         assertNull(model.getId());
-        assertEquals(4L, model.getCategory().getId());
+        assertEquals(categoryId, model.getCategory().getId());
         assertTrue(model.isActive());
     }
 
     @Test
     @DisplayName("WorkerCreateRequest: el oficio principal llega con tradeId y sin estado")
     void shouldMapWorkerCreateRequest() {
+        UUID tradeId = UUID.randomUUID();
         WorkerCreateRequest request = new WorkerCreateRequest(10L, true, null,
-                new WorkerTradeRequest(3L, new BigDecimal("50000"), RateUnit.PER_JOB));
+                new WorkerTradeRequest(tradeId, new BigDecimal("50000"), RateUnit.PER_JOB));
 
         WorkerModel model = workerDtoMapper.toModel(request);
 
         assertEquals(10L, model.getUserId());
         assertNull(model.getStatus());
         assertEquals(Set.of(), model.getZoneIds());
-        assertEquals(3L, model.getPrimaryTrade().getTrade().getId());
+        assertEquals(tradeId, model.getPrimaryTrade().getTrade().getId());
         assertEquals(new BigDecimal("50000"), model.getPrimaryTrade().getApproxRate());
     }
 
@@ -55,13 +58,16 @@ class DtoMapperTest {
     @Test
     @DisplayName("WorkerModel a WorkerResponse incluye oficios con su categoría")
     void shouldMapWorkerResponse() {
-        TradeModel trade = new TradeModel(3L, "Plomería", null, true, new TradeCategoryModel(1L, "Hogar", null));
-        WorkerModel model = new WorkerModel(1L, 10L, new WorkerTradeModel(11L, BigDecimal.TEN, RateUnit.PER_HOUR, trade));
+        TradeModel trade = new TradeModel(UUID.randomUUID(), "Plomería", null, true,
+                new TradeCategoryModel(UUID.randomUUID(), "Hogar", null));
+        UUID workerId = UUID.randomUUID();
+        WorkerModel model = new WorkerModel(workerId, 10L,
+                new WorkerTradeModel(UUID.randomUUID(), BigDecimal.TEN, RateUnit.PER_HOUR, trade));
         model.setStatus(WorkerStatus.ACTIVE);
 
         WorkerResponse response = workerDtoMapper.toResponse(model);
 
-        assertEquals(1L, response.id());
+        assertEquals(workerId, response.id());
         assertEquals("Hogar", response.primaryTrade().trade().category().name());
         assertTrue(response.secondaryTrades().isEmpty());
     }

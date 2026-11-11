@@ -19,6 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -48,7 +50,7 @@ class WorkerAuthorizationTest {
     @Autowired
     TradeCategoryRepository categoryRepository;
 
-    private Long workerDelDueno;
+    private UUID workerDelDueno;
     private Trade plomeria;
 
     @BeforeEach
@@ -150,13 +152,13 @@ class WorkerAuthorizationTest {
     private String perfilJson(Long userId) {
         return """
                 {"userId": %d, "availableNow": false,
-                 "primaryTrade": {"tradeId": %d, "approxRate": 50000, "rateUnit": "PER_JOB"}}
+                 "primaryTrade": {"tradeId": "%s", "approxRate": 50000, "rateUnit": "PER_JOB"}}
                 """.formatted(userId, plomeria.getId());
     }
 
     private String oficioJson() {
         return """
-                {"name": "Electricidad", "active": true, "categoryId": %d}
+                {"name": "Electricidad", "active": true, "categoryId": "%s"}
                 """.formatted(plomeria.getCategory().getId());
     }
 }

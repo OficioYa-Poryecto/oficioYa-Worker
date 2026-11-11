@@ -9,6 +9,8 @@ import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.UUID;
+
 @Mapper(componentModel = "spring", uses = TradeDtoMapper.class,
         injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface WorkerTradeDtoMapper {
@@ -24,7 +26,7 @@ public interface WorkerTradeDtoMapper {
     WorkerTradeResponse toResponse(WorkerTradeModel model);
 
     // El request solo trae el id del oficio; el service lo carga y valida que esté activo
-    default TradeModel tradeFromId(Long tradeId) {
+    default TradeModel tradeFromId(UUID tradeId) {
         if (tradeId == null) {
             return null;
         }

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/trades")
@@ -35,7 +36,7 @@ public class TradeController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener oficio por ID", description = "Devuelve un oficio según su identificador")
-    public ResponseEntity<TradeResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<TradeResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.findById(id)));
     }
 
@@ -52,14 +53,14 @@ public class TradeController {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar oficio", description = "Modifica los datos de un oficio")
-    public ResponseEntity<TradeResponse> update(@PathVariable Long id, @Valid @RequestBody TradeRequest request) {
+    public ResponseEntity<TradeResponse> update(@PathVariable UUID id, @Valid @RequestBody TradeRequest request) {
         return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.update(id, tradeDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     @Operation(summary = "Desactivar oficio", description = "Inactiva el oficio; no se elimina físicamente")
-    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
+    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
         tradeService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
