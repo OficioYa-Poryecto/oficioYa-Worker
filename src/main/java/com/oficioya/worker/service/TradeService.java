@@ -65,11 +65,12 @@ public class TradeService {
         return saved;
     }
 
-    public void deactivate(UUID id) {
+    public TradeModel setActive(UUID id, boolean active) {
         Trade entity = getTradeOrThrow(id);
-        entity.setActive(false);
-        tradeRepository.save(entity);
-        log.info("Trade deactivated: {}", id);
+        entity.setActive(active);
+        TradeModel saved = tradeMapper.toModel(tradeRepository.save(entity));
+        log.info("Trade {} {}", id, active ? "activated" : "deactivated");
+        return saved;
     }
 
     private Trade getTradeOrThrow(UUID id) {

@@ -1,5 +1,6 @@
 package com.oficioya.worker.controller;
 
+import com.oficioya.worker.dto.TradeActiveRequest;
 import com.oficioya.worker.dto.TradeRequest;
 import com.oficioya.worker.dto.TradeResponse;
 import com.oficioya.worker.mapper.TradeDtoMapper;
@@ -58,10 +59,10 @@ public class TradeController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Desactivar oficio", description = "Inactiva el oficio; no se elimina físicamente")
-    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
-        tradeService.deactivate(id);
-        return ResponseEntity.noContent().build();
+    @PutMapping("/{id}/active")
+    @Operation(summary = "Activar o desactivar oficio", description = "Cambia el estado del oficio; no se elimina físicamente")
+    public ResponseEntity<TradeResponse> setActive(@PathVariable UUID id,
+                                                @Valid @RequestBody TradeActiveRequest request) {
+        return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.setActive(id, request.active())));
     }
 }

@@ -164,15 +164,34 @@ class TradeServiceTest {
     }
 
     @Test
-    @DisplayName("Desactivar marca el oficio como inactivo sin borrarlo")
+    @DisplayName("Desactiva un oficio sin eliminarlo")
     void shouldDeactivateTrade() {
-        Trade plomeria = trade(TRADE_ID, "Plomería", true);
-        when(tradeRepository.findById(TRADE_ID)).thenReturn(Optional.of(plomeria));
+        UUID id = UUID.randomUUID();
+        when(tradeRepository.findById(id)).thenReturn(Optional.of(trade(id, "Plomería", true)));
+        saveReturnsArgument();
 
-        tradeService.deactivate(TRADE_ID);
+        TradeModel result = tradeService.setActive(id, false);
 
-        assertFalse(plomeria.isActive());
-        verify(tradeRepository).save(plomeria);
+        assertFalse(result.isActive());
         verify(tradeRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("Reactiva un oficio inactivo")
+    void shouldReactivateTrade() {
+        UUID id = UUID.randomUUID();
+        when(tradeRepository.findById(id)).thenReturn(Optional.of(trade(id, "Plomería", false)));
+        saveReturnsArgument();
+
+        assertTrue(tradeService.setActive(id, true).isActive());
+    }
+
+    @Test
+    @DisplayName("Lanza 404 al cambiar el estado de un oficio que no existe")
+    void shouldFailSetActiveWhenTradeNotFound() {
+        UUID id = UUID.randomUUID();
+        when(tradeRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> tradeService.setActive(id, false));
     }
 }
