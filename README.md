@@ -40,7 +40,7 @@ $env:DB_URL="jdbc:postgresql://localhost:5432/oficioya_worker"; $env:DB_USER="..
 ./mvnw spring-boot:run
 ```
 
-Swagger UI: `http://localhost:8080/swagger-ui.html` (público).
+Swagger UI: `http://localhost:8082/swagger-ui.html` (público).
 
 ## Seguridad
 
