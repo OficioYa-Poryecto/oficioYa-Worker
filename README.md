@@ -83,6 +83,7 @@ Todos los errores responden con el mismo formato:
 - El reporte queda en `target/site/jacoco/index.html` (HTML) y `target/site/jacoco/jacoco.xml` (el que lee SonarQube).
 - `verify` falla si la cobertura de líneas baja del 80%.
 - `lombok.config` evita que se cuente el código que genera Lombok.
+- **Exclusiones (documentadas):** `*MapperImpl` (código generado por MapStruct), `WorkerApplication` (solo arranca Spring, sin lógica) y el código generado por Lombok (marcado con `@Generated` en `lombok.config`).
 
 ### Análisis con SonarQube (local)
 
