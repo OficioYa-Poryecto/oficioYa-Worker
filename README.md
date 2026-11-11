@@ -45,8 +45,7 @@ Swagger UI: `http://localhost:8082/swagger-ui.html` (público).
 ## Seguridad
 
 - Autenticación con `Authorization: Bearer <token>`. Este servicio **no tiene login**: los tokens los emite Identity.
-- Claims usados: `sub` = id del usuario y `role` = `TRABAJADOR`, `CONTRATANTE` o `ADMIN`
-  (supuesto pendiente de confirmar con Identity; se leen en un único método, `JwtService.toClaims`).
+- Claims usados: `sub` = UUID del usuario y `roles` = `TRABAJADOR`, `CONTRATANTE` o `ADMIN`.
 - Reglas:
   - Solo `ADMIN` gestiona el catálogo de oficios y categorías.
   - Cada `TRABAJADOR` solo modifica su propio perfil (oficios, tarifas, zonas, disponibilidad y fotos).
