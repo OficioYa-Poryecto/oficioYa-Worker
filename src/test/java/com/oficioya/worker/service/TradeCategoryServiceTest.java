@@ -5,6 +5,7 @@ import com.oficioya.worker.exception.BusinessRuleException;
 import com.oficioya.worker.mapper.TradeCategoryMapperImpl;
 import com.oficioya.worker.model.TradeCategoryModel;
 import com.oficioya.worker.repository.TradeCategoryRepository;
+import com.oficioya.worker.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,66 @@ class TradeCategoryServiceTest {
 
         assertThrows(BusinessRuleException.class,
                 () -> categoryService.create(new TradeCategoryModel(null, "hogar", null)));
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Busca una categoría por id")
+    void shouldFindById() {
+        UUID id = UUID.randomUUID();
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(category(id, "Hogar")));
+
+        assertEquals("Hogar", categoryService.findById(id).getName());
+    }
+
+    @Test
+    @DisplayName("Lanza 404 si la categoría no existe")
+    void shouldFailWhenCategoryNotFound() {
+        UUID id = UUID.randomUUID();
+        when(categoryRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> categoryService.findById(id));
+        assertThrows(ResourceNotFoundException.class,
+                () -> categoryService.update(id, new TradeCategoryModel(null, "Nuevo", null)));
+    }
+
+    @Test
+    @DisplayName("Actualiza nombre y detalle de una categoría")
+    void shouldUpdateCategory() {
+        UUID id = UUID.randomUUID();
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(category(id, "Hogar")));
+        when(categoryRepository.findByNameIgnoreCase("Nuevo")).thenReturn(Optional.empty());
+        when(categoryRepository.save(any(TradeCategory.class))).then(inv -> inv.getArgument(0));
+
+        TradeCategoryModel result = categoryService.update(id, new TradeCategoryModel(null, "Nuevo", "Detalle"));
+
+        assertEquals("Nuevo", result.getName());
+        assertEquals("Detalle", result.getDetail());
+    }
+
+    @Test
+    @DisplayName("Permite actualizar una categoría conservando su propio nombre")
+    void shouldAllowSameNameOnUpdate() {
+        UUID id = UUID.randomUUID();
+        TradeCategory existing = category(id, "Hogar");
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(categoryRepository.findByNameIgnoreCase("Hogar")).thenReturn(Optional.of(existing));
+        when(categoryRepository.save(any(TradeCategory.class))).then(inv -> inv.getArgument(0));
+
+        assertEquals("Nuevo detalle",
+                categoryService.update(id, new TradeCategoryModel(null, "Hogar", "Nuevo detalle")).getDetail());
+    }
+
+    @Test
+    @DisplayName("No actualiza si el nombre ya lo tiene otra categoría")
+    void shouldRejectDuplicatedNameOnUpdate() {
+        UUID id = UUID.randomUUID();
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(category(id, "Hogar")));
+        when(categoryRepository.findByNameIgnoreCase("Educación"))
+                .thenReturn(Optional.of(category(UUID.randomUUID(), "Educación")));
+
+        assertThrows(BusinessRuleException.class,
+                () -> categoryService.update(id, new TradeCategoryModel(null, "Educación", null)));
         verify(categoryRepository, never()).save(any());
     }
 }
