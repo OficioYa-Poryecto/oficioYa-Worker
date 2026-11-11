@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,9 +21,7 @@ import java.util.stream.Collectors;
 /**
  * Genera y valida tokens JWT firmados con HS256.
  *
- * Supuesto pendiente de confirmar con Identity: el claim "sub" trae el id numérico del usuario
- * y el claim "role" trae el rol (TRABAJADOR, CONTRATANTE o ADMIN). Si Identity usa otros nombres,
- * solo hay que cambiar las constantes y toClaims().
+ * JWT_SECRET viene en Base64 y que se decodifica
  */
 @Service
 public class JwtService {
@@ -47,10 +44,7 @@ public class JwtService {
 
     // El reloj se inyecta para poder probar tokens expirados
     JwtService(String secret, Duration expiration, Clock clock) {
-        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_LENGTH) {
-            throw new IllegalStateException("security.jwt.secret must have at least " + MIN_SECRET_LENGTH + " bytes");
-        }
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.key = Keys.hmacShaKeyFor(decodeSecret(secret));
         this.expiration = expiration;
         this.clock = clock;
     }
@@ -139,5 +133,22 @@ public class JwtService {
     private String normalizeRole(String role) {
         String upper = role.trim().toUpperCase(Locale.ROOT);
         return upper.startsWith(ROLE_PREFIX) ? upper.substring(ROLE_PREFIX.length()) : upper;
+    }
+
+    private static byte[] decodeSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("security.jwt.secret is required");
+        }
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(secret.trim());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("security.jwt.secret must be Base64", ex);
+        }
+        if (bytes.length < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException(
+                    "security.jwt.secret must have at least " + MIN_SECRET_LENGTH + " bytes once decoded");
+        }
+        return bytes;
     }
 }

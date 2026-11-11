@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class JwtAuthenticationFilterTest {
 
-    private static final String SECRET = "clave-de-pruebas-oficioya-worker-no-usar-en-produccion";
+    private static final String SECRET = "dYlRTaT2AQf18RwfAXJDSrV9tpEsezC7GlB457788l0Q8opvjH5thxdl5f7vO2Dc";
     private static final UUID USER_ID = UUID.randomUUID();
 
     private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.systemUTC());

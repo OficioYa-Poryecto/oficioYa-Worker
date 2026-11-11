@@ -20,11 +20,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class JwtServiceTest {
 
-    private static final String SECRET = "clave-de-pruebas-oficioya-worker-no-usar-en-produccion";
-    private static final String OTHER_SECRET = "otra-clave-distinta-de-32-caracteres-o-mas-123";
+    private static final String SECRET = "dYlRTaT2AQf18RwfAXJDSrV9tpEsezC7GlB457788l0Q8opvjH5thxdl5f7vO2Dc";
+    private static final String OTHER_SECRET = "hfptHis6huAZjjWsAzaYW+WY9wnxcdVSqbPTuJ7k7lywqaXEGPtZv405GRbq9OPd";
     private static final Instant NOW = Instant.parse("2026-10-30T12:00:00Z");
     private static final UUID USER_ID = UUID.randomUUID();
-
+    
     private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
@@ -112,7 +112,7 @@ class JwtServiceTest {
         String token = Jwts.builder()
                 .subject(USER_ID.toString())
                 .expiration(Date.from(NOW.plusSeconds(600)))
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode(SECRET)))
                 .compact();
 
         assertEquals("Token must contain the claims sub and roles",
@@ -126,20 +126,7 @@ class JwtServiceTest {
                 .subject("correo@ejemplo.com")
                 .claim(JwtService.ROLES_CLAIM, List.of("TRABAJADOR"))
                 .expiration(Date.from(NOW.plusSeconds(600)))
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                .compact();
-
-        assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
-    }
-
-    @Test
-    @DisplayName("Rechaza un token firmado cuyo subject no representa un UUID")
-    void shouldRejectSubjectThatIsNotUuid() {
-        String token = Jwts.builder()
-                .subject("not-a-uuid")
-                .claim(JwtService.ROLES_CLAIM, List.of("TRABAJADOR"))
-                .expiration(Date.from(NOW.plusSeconds(600)))
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode(SECRET)))
                 .compact();
 
         assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
@@ -152,7 +139,7 @@ class JwtServiceTest {
                 .subject(USER_ID.toString())
                 .claim("role", "TRABAJADOR")
                 .expiration(Date.from(NOW.plusSeconds(600)))
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode(SECRET)))
                 .compact();
 
         assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
@@ -172,7 +159,7 @@ class JwtServiceTest {
     @DisplayName("No arranca con una clave de menos de 32 bytes")
     void shouldRejectShortSecret() {
         assertThrows(IllegalStateException.class,
-                () -> new JwtService("corta", Duration.ofMinutes(60), Clock.systemUTC()));
+                () -> new JwtService("YWJj", Duration.ofMinutes(60), Clock.systemUTC()));
         assertThrows(IllegalStateException.class,
                 () -> new JwtService(null, Duration.ofMinutes(60), Clock.systemUTC()));
     }
@@ -182,5 +169,12 @@ class JwtServiceTest {
     void shouldNotGenerateTokenWithoutData() {
         assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(null, List.of("ADMIN")));
         assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(USER_ID, List.of()));
+    }
+
+    @Test
+    @DisplayName("No arranca con un secreto que no es Base64")
+    void shouldRejectNonBase64Secret() {
+        assertThrows(IllegalStateException.class,
+                () -> new JwtService("esto no es base64!", Duration.ofMinutes(60), Clock.systemUTC()));
     }
 }

@@ -94,7 +94,7 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Token firmado con otra clave: 401")
     void tokenConOtraClaveResponde401() throws Exception {
-        String forged = new JwtService("clave-falsa-de-un-atacante-con-32-caracteres", Duration.ofMinutes(60),
+        String forged = new JwtService("We/1asgXaeGjNIlEg46FASYfiUOMXaBoubgHp3vfU7urTh+6DIIhii0ElNuCzBWD", Duration.ofMinutes(60),
                 Clock.systemUTC()).generateToken(ADMIN_ID, List.of("ADMIN"));
 
         mockMvc.perform(get("/api/v1/trades").header("Authorization", "Bearer " + forged))

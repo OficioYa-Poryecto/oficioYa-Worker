@@ -14,7 +14,7 @@ La aplicación no trae credenciales en el código. Si falta una variable obligat
 | `DB_URL` | Sí | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5432/oficioya_worker` |
 | `DB_USER` | Sí | Usuario de la base de datos | `oficioya` |
 | `DB_PASSWORD` | Sí | Contraseña de la base de datos | — |
-| `JWT_SECRET` | Sí | Clave HS256 para validar los tokens. Debe ser **la misma que usa Identity** para firmarlos. Mínimo 32 caracteres | — |
+| `JWT_SECRET` | Sí | Clave HS256 en **Base64** (mínimo 32 bytes ya decodificados). Debe ser **la misma que usa Identity** para firmar los tokens | — |
 | `JWT_EXPIRATION_MINUTES` | No (60) | Vigencia de los tokens que genere este servicio | `60` |
 | `PUBLIC_QUERIES` | No (`false`) | `true` permite los GET de consulta (catálogo, trabajadores, disponibilidad, fotos) sin token | `false` |
 
@@ -45,7 +45,7 @@ Swagger UI: `http://localhost:8082/swagger-ui.html` (público).
 ## Seguridad
 
 - Autenticación con `Authorization: Bearer <token>`. Este servicio **no tiene login**: los tokens los emite Identity.
-- Claims usados: `sub` = UUID del usuario y `roles` = `TRABAJADOR`, `CONTRATANTE` o `ADMIN`.
+- Claims usados: `sub` = UUID del usuario y `roles` = lista con `TRABAJADOR`, `CONTRATANTE` y/o `ADMIN`. Firma HS256 con el secreto en Base64.
 - Reglas:
   - Solo `ADMIN` gestiona el catálogo de oficios y categorías.
   - Cada `TRABAJADOR` solo modifica su propio perfil (oficios, tarifas, zonas, disponibilidad y fotos).
