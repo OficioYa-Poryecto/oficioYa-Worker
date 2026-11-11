@@ -325,4 +325,23 @@ class WorkerServiceTest {
 
         assertEquals(Set.of(6L), workerService.findZones(WORKER_ID));
     }
+
+    @Test
+    @DisplayName("Devuelve el perfil del trabajador por su userId")
+    void shouldFindByUserId() {
+        UUID userId = UUID.randomUUID();
+        when(workerRepository.findByUserId(userId))
+                .thenReturn(Optional.of(worker(UUID.randomUUID(), userId, WorkerStatus.ACTIVE)));
+
+        assertEquals(userId, workerService.findByUserId(userId).getUserId());
+    }
+
+    @Test
+    @DisplayName("Lanza 404 si el usuario aún no tiene perfil")
+    void shouldFailWhenUserHasNoProfile() {
+        UUID userId = UUID.randomUUID();
+        when(workerRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> workerService.findByUserId(userId));
+    }
 }

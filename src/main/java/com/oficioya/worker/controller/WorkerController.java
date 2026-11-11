@@ -60,6 +60,14 @@ public class WorkerController {
         return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.findById(id)));
     }
 
+    @PreAuthorize("hasRole('TRABAJADOR')")
+    @GetMapping("/me")
+    @Operation(summary = "Obtener mi perfil", description = "Devuelve el perfil del trabajador autenticado; 404 si aún no lo ha creado")
+    public ResponseEntity<WorkerResponse> findMe(Authentication authentication) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(
+                workerService.findByUserId(UUID.fromString(authentication.getName()))));
+    }
+
     @PreAuthorize("hasRole('ADMIN') or (hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication))")
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar trabajador", description = "Modifica la información de un trabajador que no esté Inactivo")

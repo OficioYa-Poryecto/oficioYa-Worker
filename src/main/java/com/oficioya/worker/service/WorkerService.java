@@ -77,6 +77,14 @@ public class WorkerService {
         return buildModel(getWorkerOrThrow(id));
     }
 
+    public WorkerModel findByUserId(UUID userId) {
+        log.debug("Looking for worker profile of user: {}", userId);
+        return buildModel(workerRepository.findByUserId(userId).orElseThrow(() -> {
+            log.warn("Worker profile not found for user: {}", userId);
+            return new ResourceNotFoundException("Worker profile not found for user: " + userId);
+        }));
+    }
+
     @Transactional
     public WorkerModel create(WorkerModel model) {
         if (workerRepository.findByUserId(model.getUserId()).isPresent()) {
