@@ -17,6 +17,7 @@ public interface WorkerDtoMapper {
 
     // Estado, oficios secundarios, franjas y fotos se gestionan con sus propios endpoints
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "secondaryTrades", ignore = true)
     @Mapping(target = "slots", ignore = true)

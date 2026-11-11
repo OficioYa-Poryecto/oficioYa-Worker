@@ -15,7 +15,7 @@ public class WorkerModel {
 
     private UUID id;
     @NotNull
-    private Long userId;
+    private UUID userId;
     private WorkerStatus status;
     private boolean availableNow;
     private Set<Long> zoneIds = new HashSet<>();    
@@ -33,7 +33,7 @@ public class WorkerModel {
         this.secondaryTrades = new ArrayList<>();
     }
 
-    public WorkerModel(UUID id, Long userId, WorkerTradeModel primaryTrade) {
+    public WorkerModel(UUID id, UUID userId, WorkerTradeModel primaryTrade) {
         this();
         this.id = id;
         this.userId = userId;
@@ -48,11 +48,11 @@ public class WorkerModel {
         this.id = id;
     }
 
-    public Long getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 

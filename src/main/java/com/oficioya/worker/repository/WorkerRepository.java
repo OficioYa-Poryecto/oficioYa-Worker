@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface WorkerRepository extends JpaRepository<Worker, UUID> {
 
-    Optional<Worker> findByUserId(Long userId);
+    Optional<Worker> findByUserId(UUID userId);
 
     List<Worker> findByAvailableNowTrue();
 

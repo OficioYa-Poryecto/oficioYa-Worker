@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
@@ -37,6 +38,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class SecurityErrorHandlingTest {
 
+    private static final UUID WORKER_OWNER_ID = UUID.randomUUID();
+    private static final UUID CONTRACTOR_ID = UUID.randomUUID();
+    private static final UUID ADMIN_ID = UUID.randomUUID();
     private static final UUID UNKNOWN_TRADE_ID = UUID.randomUUID();
 
     @Autowired
@@ -80,7 +84,7 @@ class SecurityErrorHandlingTest {
     void tokenExpiradoResponde401() throws Exception {
         String expired = new JwtService(secret, Duration.ofMinutes(1),
                 Clock.fixed(Instant.now().minus(Duration.ofHours(2)), ZoneOffset.UTC))
-                .generateToken(10L, "TRABAJADOR");
+                .generateToken(WORKER_OWNER_ID, List.of("TRABAJADOR"));
 
         mockMvc.perform(get("/api/v1/trades").header("Authorization", "Bearer " + expired))
                 .andExpect(status().isUnauthorized())
@@ -91,7 +95,7 @@ class SecurityErrorHandlingTest {
     @DisplayName("Token firmado con otra clave: 401")
     void tokenConOtraClaveResponde401() throws Exception {
         String forged = new JwtService("clave-falsa-de-un-atacante-con-32-caracteres", Duration.ofMinutes(60),
-                Clock.systemUTC()).generateToken(1L, "ADMIN");
+                Clock.systemUTC()).generateToken(ADMIN_ID, List.of("ADMIN"));
 
         mockMvc.perform(get("/api/v1/trades").header("Authorization", "Bearer " + forged))
                 .andExpect(status().isUnauthorized())
@@ -102,7 +106,7 @@ class SecurityErrorHandlingTest {
     @DisplayName("Token válido con rol insuficiente: 403 con el formato común de error")
     void rolInsuficienteResponde403() throws Exception {
         mockMvc.perform(post("/api/v1/trade-categories")
-                        .header("Authorization", bearer(10L, "TRABAJADOR"))
+                        .header("Authorization", bearer(WORKER_OWNER_ID, "TRABAJADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"Hogar\"}"))
                 .andExpect(status().isForbidden())
@@ -116,7 +120,7 @@ class SecurityErrorHandlingTest {
     @DisplayName("Token válido de ADMIN: crea categorías a través del filtro real")
     void adminConTokenCreaCategoria() throws Exception {
         mockMvc.perform(post("/api/v1/trade-categories")
-                        .header("Authorization", bearer(1L, "ADMIN"))
+                        .header("Authorization", bearer(ADMIN_ID, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"Tecnología\", \"detail\": \"Reparación de equipos\"}"))
                 .andExpect(status().isCreated())
@@ -127,7 +131,7 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Token válido de CONTRATANTE: puede consultar el catálogo")
     void contratanteConsultaCatalogo() throws Exception {
-        mockMvc.perform(get("/api/v1/trades").header("Authorization", bearer(20L, "CONTRATANTE")))
+        mockMvc.perform(get("/api/v1/trades").header("Authorization", bearer(CONTRACTOR_ID, "CONTRATANTE")))
                 .andExpect(status().isOk());
     }
 
@@ -141,7 +145,8 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Recurso inexistente: 404 con el mismo formato que 401 y 403")
     void noEncontradoUsaElMismoFormato() throws Exception {
-        mockMvc.perform(get("/api/v1/trades/" + UNKNOWN_TRADE_ID).header("Authorization", bearer(20L, "CONTRATANTE")))
+        mockMvc.perform(get("/api/v1/trades/" + UNKNOWN_TRADE_ID)
+                        .header("Authorization", bearer(CONTRACTOR_ID, "CONTRATANTE")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
@@ -157,7 +162,7 @@ class SecurityErrorHandlingTest {
         categoryRepository.save(hogar);
 
         mockMvc.perform(post("/api/v1/trade-categories")
-                        .header("Authorization", bearer(1L, "ADMIN"))
+                        .header("Authorization", bearer(ADMIN_ID, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"hogar\"}"))
                 .andExpect(status().isConflict())
@@ -169,7 +174,7 @@ class SecurityErrorHandlingTest {
     @DisplayName("Datos inválidos en el DTO: 400 indicando el campo")
     void validacionResponde400() throws Exception {
         mockMvc.perform(post("/api/v1/trade-categories")
-                        .header("Authorization", bearer(1L, "ADMIN"))
+                        .header("Authorization", bearer(ADMIN_ID, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"  \"}"))
                 .andExpect(status().isBadRequest())
@@ -181,11 +186,12 @@ class SecurityErrorHandlingTest {
     @DisplayName("El perfil público del trabajador no expone correo ni teléfono")
     void perfilNoExponeDatosDeContacto() throws Exception {
         Worker worker = new Worker();
-        worker.setUserId(10L);
+        worker.setUserId(WORKER_OWNER_ID);
         worker.setStatus(WorkerStatus.ACTIVE);
         UUID workerId = workerRepository.save(worker).getId();
 
-        mockMvc.perform(get("/api/v1/workers/" + workerId).header("Authorization", bearer(20L, "CONTRATANTE")))
+        mockMvc.perform(get("/api/v1/workers/" + workerId)
+                        .header("Authorization", bearer(CONTRACTOR_ID, "CONTRATANTE")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(workerId.toString()))
                 .andExpect(jsonPath("$.email").doesNotExist())
@@ -194,7 +200,7 @@ class SecurityErrorHandlingTest {
                 .andExpect(content().string(not(containsString("phone"))));
     }
 
-    private String bearer(Long userId, String role) {
-        return "Bearer " + jwtService.generateToken(userId, role);
+    private String bearer(UUID userId, String role) {
+        return "Bearer " + jwtService.generateToken(userId, List.of(role));
     }
 }

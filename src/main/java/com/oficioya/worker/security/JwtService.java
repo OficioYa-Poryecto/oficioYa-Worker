@@ -15,11 +15,9 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
-import java.util.Locale;
+import java.time.*;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Genera y valida tokens JWT firmados con HS256.
@@ -33,7 +31,7 @@ public class JwtService {
 
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
-    static final String ROLE_CLAIM = "role";
+    static final String ROLES_CLAIM = "roles";
     private static final String ROLE_PREFIX = "ROLE_";
     private static final int MIN_SECRET_LENGTH = 32;   // 256 bits, lo mínimo para HS256
 
@@ -57,14 +55,14 @@ public class JwtService {
         this.clock = clock;
     }
 
-    public String generateToken(Long userId, String role) {
-        if (userId == null || role == null || role.isBlank()) {
-            throw new IllegalArgumentException("User id and role are required to generate a token");
+    public String generateToken(UUID userId, Collection<String> roles) {
+        if (userId == null || roles == null || roles.isEmpty()) {
+            throw new IllegalArgumentException("User id and roles are required to generate a token");
         }
         Instant now = clock.instant();
         return Jwts.builder()
                 .subject(userId.toString())
-                .claim(ROLE_CLAIM, normalizeRole(role))
+                .claim(ROLES_CLAIM, roles.stream().map(this::normalizeRole).toList())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key, Jwts.SIG.HS256)
@@ -106,12 +104,12 @@ public class JwtService {
         }
     }
 
-    public Long extractUserId(String token) {
+    public UUID extractUserId(String token) {
         return validateToken(token).userId();
     }
 
-    public String extractRole(String token) {
-        return validateToken(token).role();
+    public Set<String> extractRoles(String token) {
+        return validateToken(token).roles();
     }
 
     public Instant extractExpiration(String token) {
@@ -121,18 +119,20 @@ public class JwtService {
     // Único punto donde se leen los claims del token
     private JwtClaims toClaims(Claims claims) {
         String subject = claims.getSubject();
-        String role = claims.get(ROLE_CLAIM, String.class);
-        if (subject == null || role == null || role.isBlank()) {
-            throw new InvalidTokenException("Token must contain the claims sub and role");
+        List<?> rawRoles = claims.get(ROLES_CLAIM, List.class);
+        if (subject == null || rawRoles == null || rawRoles.isEmpty()) {
+            throw new InvalidTokenException("Token must contain the claims sub and roles");
         }
-        Long userId;
+        UUID userId;
         try {
-            userId = Long.valueOf(subject);
-        } catch (NumberFormatException ex) {
+            userId = UUID.fromString(subject);
+        } catch (IllegalArgumentException ex) {
             throw new InvalidTokenException("Token subject is not a valid user id", ex);
         }
+        Set<String> roles = rawRoles.stream()
+                .map(Object::toString).map(this::normalizeRole).collect(Collectors.toSet());
         Instant expiresAt = claims.getExpiration() == null ? null : claims.getExpiration().toInstant();
-        return new JwtClaims(userId, normalizeRole(role), expiresAt);
+        return new JwtClaims(userId, roles, expiresAt);
     }
 
     // Acepta "trabajador", "TRABAJADOR" o "ROLE_TRABAJADOR" y devuelve "TRABAJADOR"

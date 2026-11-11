@@ -12,6 +12,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,18 +23,19 @@ class JwtServiceTest {
     private static final String SECRET = "clave-de-pruebas-oficioya-worker-no-usar-en-produccion";
     private static final String OTHER_SECRET = "otra-clave-distinta-de-32-caracteres-o-mas-123";
     private static final Instant NOW = Instant.parse("2026-10-30T12:00:00Z");
+    private static final UUID USER_ID = UUID.randomUUID();
 
     private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
-    @DisplayName("Genera un token válido con sub, role y expiración")
+    @DisplayName("Genera un token válido con sub, roles y expiración")
     void shouldGenerateAndValidateToken() {
-        String token = jwtService.generateToken(10L, "TRABAJADOR");
+        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR"));
 
         JwtClaims claims = jwtService.validateToken(token);
 
-        assertEquals(10L, claims.userId());
-        assertEquals("TRABAJADOR", claims.role());
+        assertEquals(USER_ID, claims.userId());
+        assertEquals(Set.of("TRABAJADOR"), claims.roles());
         assertEquals(NOW.plus(Duration.ofMinutes(60)), claims.expiresAt());
         assertTrue(jwtService.isTokenValid(token));
     }
@@ -39,18 +43,20 @@ class JwtServiceTest {
     @Test
     @DisplayName("Los métodos extract devuelven id, rol y expiración del token")
     void shouldExtractClaims() {
-        String token = jwtService.generateToken(7L, "ADMIN");
+        String token = jwtService.generateToken(USER_ID, List.of("ADMIN"));
 
-        assertEquals(7L, jwtService.extractUserId(token));
-        assertEquals("ADMIN", jwtService.extractRole(token));
+        assertEquals(USER_ID, jwtService.extractUserId(token));
+        assertEquals(Set.of("ADMIN"), jwtService.extractRoles(token));
         assertEquals(NOW.plus(Duration.ofMinutes(60)), jwtService.extractExpiration(token));
     }
 
     @Test
     @DisplayName("Normaliza el rol: acepta minúsculas y el prefijo ROLE_")
     void shouldNormalizeRole() {
-        assertEquals("CONTRATANTE", jwtService.extractRole(jwtService.generateToken(1L, "contratante")));
-        assertEquals("ADMIN", jwtService.extractRole(jwtService.generateToken(1L, "ROLE_ADMIN")));
+        assertEquals(Set.of("CONTRATANTE"),
+                jwtService.extractRoles(jwtService.generateToken(USER_ID, List.of("contratante"))));
+        assertEquals(Set.of("ADMIN"),
+                jwtService.extractRoles(jwtService.generateToken(USER_ID, List.of("ROLE_ADMIN"))));
     }
 
     @Test
@@ -58,7 +64,7 @@ class JwtServiceTest {
     void shouldRejectExpiredToken() {
         JwtService pastService = new JwtService(SECRET, Duration.ofMinutes(5),
                 Clock.fixed(NOW.minus(Duration.ofHours(1)), ZoneOffset.UTC));
-        String token = pastService.generateToken(10L, "TRABAJADOR");
+        String token = pastService.generateToken(USER_ID, List.of("TRABAJADOR"));
 
         InvalidTokenException ex = assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
         assertEquals("Token has expired", ex.getMessage());
@@ -68,10 +74,11 @@ class JwtServiceTest {
     @Test
     @DisplayName("Rechaza un token con el payload alterado")
     void shouldRejectTamperedPayload() {
-        String token = jwtService.generateToken(10L, "TRABAJADOR");
+        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR"));
         String[] parts = token.split("\\.");
         String forgedPayload = Base64.getUrlEncoder().withoutPadding().encodeToString(
-                ("{\"sub\":\"10\",\"role\":\"ADMIN\",\"exp\":" + NOW.plusSeconds(3600).getEpochSecond() + "}")
+                ("{\"sub\":\"" + USER_ID + "\",\"roles\":[\"ADMIN\"],\"exp\":"
+                        + NOW.plusSeconds(3600).getEpochSecond() + "}")
                         .getBytes(StandardCharsets.UTF_8));
         String tampered = parts[0] + "." + forgedPayload + "." + parts[2];
 
@@ -83,7 +90,7 @@ class JwtServiceTest {
     @DisplayName("Rechaza un token firmado con otra clave")
     void shouldRejectTokenSignedWithOtherKey() {
         String token = new JwtService(OTHER_SECRET, Duration.ofMinutes(60), Clock.fixed(NOW, ZoneOffset.UTC))
-                .generateToken(10L, "ADMIN");
+                .generateToken(USER_ID, List.of("ADMIN"));
 
         assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
     }
@@ -100,29 +107,65 @@ class JwtServiceTest {
     }
 
     @Test
-    @DisplayName("Rechaza un token firmado correctamente pero sin el claim role")
-    void shouldRejectTokenWithoutRole() {
+    @DisplayName("Rechaza un token firmado correctamente pero sin el claim roles")
+    void shouldRejectTokenWithoutRoles() {
         String token = Jwts.builder()
-                .subject("10")
+                .subject(USER_ID.toString())
                 .expiration(Date.from(NOW.plusSeconds(600)))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .compact();
 
-        assertEquals("Token must contain the claims sub and role",
+        assertEquals("Token must contain the claims sub and roles",
                 assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token)).getMessage());
     }
 
     @Test
-    @DisplayName("Rechaza un token cuyo sub no es un id numérico")
-    void shouldRejectNonNumericSubject() {
+    @DisplayName("Rechaza un token cuyo sub no es un UUID")
+    void shouldRejectNonUuidSubject() {
         String token = Jwts.builder()
                 .subject("correo@ejemplo.com")
+                .claim(JwtService.ROLES_CLAIM, List.of("TRABAJADOR"))
+                .expiration(Date.from(NOW.plusSeconds(600)))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
+    }
+
+    @Test
+    @DisplayName("Rechaza un token firmado cuyo subject no representa un UUID")
+    void shouldRejectSubjectThatIsNotUuid() {
+        String token = Jwts.builder()
+                .subject("not-a-uuid")
+                .claim(JwtService.ROLES_CLAIM, List.of("TRABAJADOR"))
+                .expiration(Date.from(NOW.plusSeconds(600)))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
+    }
+
+    @Test
+    @DisplayName("Rechaza un token con el formato antiguo de claim role")
+    void shouldRejectTokenWithLegacyRoleClaim() {
+        String token = Jwts.builder()
+                .subject(USER_ID.toString())
                 .claim("role", "TRABAJADOR")
                 .expiration(Date.from(NOW.plusSeconds(600)))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .compact();
 
         assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
+    }
+
+    @Test
+    @DisplayName("Acepta un token con múltiples roles")
+    void shouldAcceptMultipleRoles() {
+        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR", "ADMIN"));
+
+        JwtClaims claims = jwtService.validateToken(token);
+
+        assertEquals(Set.of("TRABAJADOR", "ADMIN"), claims.roles());
     }
 
     @Test
@@ -137,7 +180,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("No genera tokens sin id o sin rol")
     void shouldNotGenerateTokenWithoutData() {
-        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(null, "ADMIN"));
-        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(1L, " "));
+        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(null, List.of("ADMIN")));
+        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(USER_ID, List.of()));
     }
 }

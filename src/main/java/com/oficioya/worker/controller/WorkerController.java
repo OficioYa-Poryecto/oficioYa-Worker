@@ -5,6 +5,7 @@ import com.oficioya.worker.dto.WorkerResponse;
 import com.oficioya.worker.dto.WorkerUpdateRequest;
 import com.oficioya.worker.dto.WorkerZonesResponse;
 import com.oficioya.worker.mapper.WorkerDtoMapper;
+import com.oficioya.worker.model.WorkerModel;
 import com.oficioya.worker.service.WorkerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.math.BigDecimal;
 import java.util.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/v1/workers")
@@ -31,12 +33,15 @@ public class WorkerController {
     }
 
     // El perfil se crea solo para el usuario del token
-    @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isSelf(#request.userId(), authentication)")
+    @PreAuthorize("hasRole('TRABAJADOR')")
     @PostMapping
     @Operation(summary = "Crear trabajador", description = "Registra un trabajador nuevo con estado Activo")
-    public ResponseEntity<WorkerResponse> create(@Valid @RequestBody WorkerCreateRequest request) {
+    public ResponseEntity<WorkerResponse> create(@Valid @RequestBody WorkerCreateRequest request,
+                                                Authentication authentication) {
+        WorkerModel model = workerDtoMapper.toModel(request);
+        model.setUserId(UUID.fromString(authentication.getName()));
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(workerDtoMapper.toResponse(workerService.create(workerDtoMapper.toModel(request))));
+                .body(workerDtoMapper.toResponse(workerService.create(model)));
     }
 
     @GetMapping

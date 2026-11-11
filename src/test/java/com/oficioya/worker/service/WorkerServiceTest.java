@@ -30,6 +30,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WorkerServiceTest {
 
+    private static final UUID USER_ID = UUID.randomUUID();
+    private static final UUID OTHER_USER_ID = UUID.randomUUID();
+    private static final UUID UNKNOWN_USER_ID = UUID.randomUUID();
     private static final UUID WORKER_ID = UUID.randomUUID();
     private static final UUID OTHER_WORKER_ID = UUID.randomUUID();
     private static final UUID UNKNOWN_WORKER_ID = UUID.randomUUID();
@@ -66,7 +69,7 @@ class WorkerServiceTest {
         plomeria.setCategory(hogar);
     }
 
-    private Worker worker(UUID id, Long userId, WorkerStatus status) {
+    private Worker worker(UUID id, UUID userId, WorkerStatus status) {
         Worker worker = new Worker();
         worker.setId(id);
         worker.setUserId(userId);
@@ -85,7 +88,7 @@ class WorkerServiceTest {
         return workerTrade;
     }
 
-    private WorkerModel newProfile(Long userId, UUID tradeId) {
+    private WorkerModel newProfile(UUID userId, UUID tradeId) {
         TradeModel trade = new TradeModel();
         trade.setId(tradeId);
         WorkerModel model = new WorkerModel(null, userId,
@@ -99,7 +102,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Crea el perfil activo con su oficio principal")
     void shouldCreateWorker() {
-        when(workerRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        when(workerRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(tradeRepository.findById(TRADE_ID)).thenReturn(Optional.of(plomeria));
         when(workerRepository.save(any(Worker.class))).thenAnswer(inv -> {
             Worker saved = inv.getArgument(0);
@@ -107,7 +110,7 @@ class WorkerServiceTest {
             return saved;
         });
 
-        WorkerModel model = newProfile(10L, TRADE_ID);
+        WorkerModel model = newProfile(USER_ID, TRADE_ID);
         model.setStatus(WorkerStatus.PAUSED);   // el estado que mande el cliente se ignora
         WorkerModel result = workerService.create(model);
 
@@ -125,19 +128,19 @@ class WorkerServiceTest {
     @Test
     @DisplayName("No crea un segundo perfil para el mismo usuario")
     void shouldRejectDuplicatedProfile() {
-        when(workerRepository.findByUserId(10L)).thenReturn(Optional.of(worker(WORKER_ID, 10L, WorkerStatus.ACTIVE)));
+        when(workerRepository.findByUserId(USER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE)));
 
-        assertThrows(BusinessRuleException.class, () -> workerService.create(newProfile(10L, TRADE_ID)));
+        assertThrows(BusinessRuleException.class, () -> workerService.create(newProfile(USER_ID, TRADE_ID)));
         verify(workerRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("No crea el perfil si el oficio principal no existe")
     void shouldRejectUnknownPrimaryTrade() {
-        when(workerRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        when(workerRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(tradeRepository.findById(UNKNOWN_TRADE_ID)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> workerService.create(newProfile(10L, UNKNOWN_TRADE_ID)));
+        assertThrows(ResourceNotFoundException.class, () -> workerService.create(newProfile(USER_ID, UNKNOWN_TRADE_ID)));
         verify(workerRepository, never()).save(any());
     }
 
@@ -145,10 +148,10 @@ class WorkerServiceTest {
     @DisplayName("No crea el perfil con un oficio inactivo")
     void shouldRejectInactivePrimaryTrade() {
         plomeria.setActive(false);
-        when(workerRepository.findByUserId(10L)).thenReturn(Optional.empty());
+        when(workerRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
         when(tradeRepository.findById(TRADE_ID)).thenReturn(Optional.of(plomeria));
 
-        assertThrows(BusinessRuleException.class, () -> workerService.create(newProfile(10L, TRADE_ID)));
+        assertThrows(BusinessRuleException.class, () -> workerService.create(newProfile(USER_ID, TRADE_ID)));
         verify(workerRepository, never()).save(any());
     }
 
@@ -157,7 +160,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("findById arma el perfil separando oficio principal y secundarios")
     void shouldBuildFullProfile() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         Trade costura = new Trade();
         costura.setId(OTHER_TRADE_ID);
         costura.setName("Costura");
@@ -184,13 +187,13 @@ class WorkerServiceTest {
     @Test
     @DisplayName("La búsqueda filtra por zona, disponibilidad, oficio y tarifa máxima")
     void shouldSearchWithFilters() {
-        Worker barato = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker barato = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         barato.setAvailableNow(true);
         barato.getZoneIds().add(5L);
-        Worker caro = worker(OTHER_WORKER_ID, 20L, WorkerStatus.ACTIVE);
+        Worker caro = worker(OTHER_WORKER_ID, OTHER_USER_ID, WorkerStatus.ACTIVE);
         caro.setAvailableNow(true);
         caro.getZoneIds().add(5L);
-        Worker otraZona = worker(UUID.randomUUID(), 30L, WorkerStatus.ACTIVE);
+        Worker otraZona = worker(UUID.randomUUID(), UNKNOWN_USER_ID, WorkerStatus.ACTIVE);
         otraZona.setAvailableNow(true);
         otraZona.getZoneIds().add(8L);
         when(workerRepository.findByStatus(WorkerStatus.ACTIVE)).thenReturn(List.of(barato, caro, otraZona));
@@ -226,7 +229,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Al pausar el perfil deja de estar disponible ahora")
     void shouldClearAvailableNowWhenPaused() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         worker.setAvailableNow(true);
         when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         when(workerRepository.save(worker)).thenReturn(worker);
@@ -243,7 +246,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Marca al trabajador como disponible ahora conservando su estado")
     void shouldUpdateAvailableNow() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         when(workerRepository.save(worker)).thenReturn(worker);
 
@@ -258,7 +261,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Un perfil pausado solo se puede reactivar")
     void shouldOnlyReactivatePausedWorker() {
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, 10L, WorkerStatus.PAUSED)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
 
         WorkerModel changes = new WorkerModel();
         changes.setAvailableNow(true);
@@ -270,7 +273,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Reactiva un perfil pausado")
     void shouldReactivatePausedWorker() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.PAUSED);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED);
         when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         when(workerRepository.save(worker)).thenReturn(worker);
 
@@ -284,7 +287,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Agrega una zona de cobertura")
     void shouldAddZone() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
 
         workerService.addZone(WORKER_ID, 5L);
@@ -296,7 +299,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Un trabajador pausado no puede cambiar sus zonas")
     void shouldNotAddZoneToPausedWorker() {
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, 10L, WorkerStatus.PAUSED)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
 
         assertThrows(BusinessRuleException.class, () -> workerService.addZone(WORKER_ID, 5L));
         verify(workerRepository, never()).save(any());
@@ -305,7 +308,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Quitar una zona que el trabajador no cubre lanza ResourceNotFoundException")
     void shouldFailRemovingUncoveredZone() {
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, 10L, WorkerStatus.ACTIVE)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE)));
 
         assertThrows(ResourceNotFoundException.class, () -> workerService.removeZone(WORKER_ID, 5L));
         verify(workerRepository, never()).save(any());
@@ -314,7 +317,7 @@ class WorkerServiceTest {
     @Test
     @DisplayName("Quita una zona cubierta y lista las restantes")
     void shouldRemoveZone() {
-        Worker worker = worker(WORKER_ID, 10L, WorkerStatus.ACTIVE);
+        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
         worker.getZoneIds().addAll(Set.of(5L, 6L));
         when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
 

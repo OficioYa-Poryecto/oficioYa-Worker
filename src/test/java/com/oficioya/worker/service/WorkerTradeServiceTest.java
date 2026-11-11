@@ -36,6 +36,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WorkerTradeServiceTest {
 
+    private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID WORKER_ID = UUID.randomUUID();
     private static final UUID OTHER_WORKER_ID = UUID.randomUUID();
     private static final UUID UNKNOWN_WORKER_ID = UUID.randomUUID();
@@ -63,7 +64,7 @@ class WorkerTradeServiceTest {
 
         worker = new Worker();
         worker.setId(WORKER_ID);
-        worker.setUserId(10L);
+        worker.setUserId(USER_ID);
         worker.setStatus(WorkerStatus.ACTIVE);
 
         TradeCategory hogar = new TradeCategory();

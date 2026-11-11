@@ -32,10 +32,4 @@ public class WorkerOwnership {
                 .map(worker -> worker.getUserId().toString().equals(authentication.getName()))
                 .orElse(true);
     }
-
-    // true si el userId enviado es el del usuario autenticado (no se crean perfiles para otros)
-    public boolean isSelf(Long userId, Authentication authentication) {
-        return userId != null && authentication != null
-                && userId.toString().equals(authentication.getName());
-    }
 }
