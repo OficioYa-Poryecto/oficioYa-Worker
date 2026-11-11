@@ -8,10 +8,13 @@ import com.oficioya.worker.repository.TradeCategoryRepository;
 import com.oficioya.worker.repository.TradeRepository;
 import com.oficioya.worker.repository.WorkerRepository;
 import com.oficioya.worker.security.JwtService;
+import com.oficioya.worker.security.TestTokens;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -20,7 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -62,6 +64,9 @@ class WorkerAuthorizationTest {
 
     private UUID workerDelDueno;
     private Trade plomeria;
+
+    @Value("${security.jwt.secret}")
+    String secret;
 
     @BeforeEach
     void preparar() {
@@ -171,8 +176,9 @@ class WorkerAuthorizationTest {
     }
 
     private String bearer(UUID userId, String role) {
-        return "Bearer " + jwtService.generateToken(userId, List.of(role));
+        return "Bearer " + TestTokens.generate(secret, userId, role);
     }
+
 
     private String oficioJson() {
         return """

@@ -24,13 +24,15 @@ class JwtServiceTest {
     private static final String OTHER_SECRET = "hfptHis6huAZjjWsAzaYW+WY9wnxcdVSqbPTuJ7k7lywqaXEGPtZv405GRbq9OPd";
     private static final Instant NOW = Instant.parse("2026-10-30T12:00:00Z");
     private static final UUID USER_ID = UUID.randomUUID();
+    private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
+    private static final Duration VALIDITY = Duration.ofMinutes(60);
     
-    private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.fixed(NOW, ZoneOffset.UTC));
+    private final JwtService jwtService = new JwtService(SECRET, CLOCK);
 
     @Test
     @DisplayName("Genera un token válido con sub, roles y expiración")
     void shouldGenerateAndValidateToken() {
-        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR"));
+        String token = TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"TRABAJADOR");
 
         JwtClaims claims = jwtService.validateToken(token);
 
@@ -43,7 +45,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Los métodos extract devuelven id, rol y expiración del token")
     void shouldExtractClaims() {
-        String token = jwtService.generateToken(USER_ID, List.of("ADMIN"));
+        String token = TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"ADMIN");
 
         assertEquals(USER_ID, jwtService.extractUserId(token));
         assertEquals(Set.of("ADMIN"), jwtService.extractRoles(token));
@@ -54,17 +56,19 @@ class JwtServiceTest {
     @DisplayName("Normaliza el rol: acepta minúsculas y el prefijo ROLE_")
     void shouldNormalizeRole() {
         assertEquals(Set.of("CONTRATANTE"),
-                jwtService.extractRoles(jwtService.generateToken(USER_ID, List.of("contratante"))));
+                jwtService.extractRoles(TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"contratante")));
         assertEquals(Set.of("ADMIN"),
-                jwtService.extractRoles(jwtService.generateToken(USER_ID, List.of("ROLE_ADMIN"))));
+                jwtService.extractRoles(TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"ROLE_ADMIN")));
     }
 
     @Test
     @DisplayName("Rechaza un token expirado")
     void shouldRejectExpiredToken() {
-        JwtService pastService = new JwtService(SECRET, Duration.ofMinutes(5),
-                Clock.fixed(NOW.minus(Duration.ofHours(1)), ZoneOffset.UTC));
-        String token = pastService.generateToken(USER_ID, List.of("TRABAJADOR"));
+        JwtService pastService = new JwtService(SECRET, CLOCK);
+        String token = TestTokens.generate(SECRET,
+                                             Clock.fixed(NOW.minus(Duration.ofHours(1)), 
+                                             ZoneOffset.UTC), Duration.ofMinutes(5), 
+                                             USER_ID, "TRABAJADOR");
 
         InvalidTokenException ex = assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
         assertEquals("Token has expired", ex.getMessage());
@@ -74,7 +78,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Rechaza un token con el payload alterado")
     void shouldRejectTamperedPayload() {
-        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR"));
+        String token = TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"TRABAJADOR");
         String[] parts = token.split("\\.");
         String forgedPayload = Base64.getUrlEncoder().withoutPadding().encodeToString(
                 ("{\"sub\":\"" + USER_ID + "\",\"roles\":[\"ADMIN\"],\"exp\":"
@@ -89,8 +93,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Rechaza un token firmado con otra clave")
     void shouldRejectTokenSignedWithOtherKey() {
-        String token = new JwtService(OTHER_SECRET, Duration.ofMinutes(60), Clock.fixed(NOW, ZoneOffset.UTC))
-                .generateToken(USER_ID, List.of("ADMIN"));
+        String token = TestTokens.generate(OTHER_SECRET, CLOCK, VALIDITY, USER_ID, "ADMIN");
 
         assertThrows(InvalidTokenException.class, () -> jwtService.validateToken(token));
     }
@@ -148,7 +151,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Acepta un token con múltiples roles")
     void shouldAcceptMultipleRoles() {
-        String token = jwtService.generateToken(USER_ID, List.of("TRABAJADOR", "ADMIN"));
+        String token = TestTokens.generate(SECRET, CLOCK, VALIDITY, USER_ID,"TRABAJADOR", "ADMIN");
 
         JwtClaims claims = jwtService.validateToken(token);
 
@@ -159,22 +162,15 @@ class JwtServiceTest {
     @DisplayName("No arranca con una clave de menos de 32 bytes")
     void shouldRejectShortSecret() {
         assertThrows(IllegalStateException.class,
-                () -> new JwtService("YWJj", Duration.ofMinutes(60), Clock.systemUTC()));
+                () -> new JwtService("YWJj", Clock.systemUTC()));
         assertThrows(IllegalStateException.class,
-                () -> new JwtService(null, Duration.ofMinutes(60), Clock.systemUTC()));
-    }
-
-    @Test
-    @DisplayName("No genera tokens sin id o sin rol")
-    void shouldNotGenerateTokenWithoutData() {
-        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(null, List.of("ADMIN")));
-        assertThrows(IllegalArgumentException.class, () -> jwtService.generateToken(USER_ID, List.of()));
+                () -> new JwtService(null, Clock.systemUTC()));
     }
 
     @Test
     @DisplayName("No arranca con un secreto que no es Base64")
     void shouldRejectNonBase64Secret() {
         assertThrows(IllegalStateException.class,
-                () -> new JwtService("esto no es base64!", Duration.ofMinutes(60), Clock.systemUTC()));
+                () -> new JwtService("esto no es base64!", Clock.systemUTC()));
     }
 }

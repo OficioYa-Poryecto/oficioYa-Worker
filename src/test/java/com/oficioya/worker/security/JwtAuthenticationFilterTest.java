@@ -22,7 +22,7 @@ class JwtAuthenticationFilterTest {
     private static final String SECRET = "dYlRTaT2AQf18RwfAXJDSrV9tpEsezC7GlB457788l0Q8opvjH5thxdl5f7vO2Dc";
     private static final UUID USER_ID = UUID.randomUUID();
 
-    private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.systemUTC());
+    private final JwtService jwtService = new JwtService(SECRET, Clock.systemUTC());
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
 
     @AfterEach
@@ -34,7 +34,7 @@ class JwtAuthenticationFilterTest {
     @DisplayName("Con un token válido autentica al usuario con su id como nombre y su rol")
     void shouldAuthenticateWithValidToken() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer " + jwtService.generateToken(USER_ID, List.of("TRABAJADOR")));
+        request.addHeader("Authorization", "Bearer " + TestTokens.generate(SECRET, USER_ID, "TRABAJADOR"));
         MockFilterChain chain = new MockFilterChain();
 
         filter.doFilter(request, new MockHttpServletResponse(), chain);

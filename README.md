@@ -15,7 +15,6 @@ La aplicación no trae credenciales en el código. Si falta una variable obligat
 | `DB_USER` | Sí | Usuario de la base de datos | `oficioya` |
 | `DB_PASSWORD` | Sí | Contraseña de la base de datos | — |
 | `JWT_SECRET` | Sí | Clave HS256 en **Base64** (mínimo 32 bytes ya decodificados). Debe ser **la misma que usa Identity** para firmar los tokens | — |
-| `JWT_EXPIRATION_MINUTES` | No (60) | Vigencia de los tokens que genere este servicio | `60` |
 | `PUBLIC_QUERIES` | No (`false`) | `true` permite los GET de consulta (catálogo, trabajadores, disponibilidad, fotos) sin token | `false` |
 
 Para desarrollo local, copia `.env.example` a `.env` (ignorado por git) y llénalo. Para generar una clave:
