@@ -1,8 +1,9 @@
 package com.oficioya.worker.controller;
 
+import com.oficioya.worker.dto.AvailabilityNowRequest;
 import com.oficioya.worker.dto.WorkerCreateRequest;
 import com.oficioya.worker.dto.WorkerResponse;
-import com.oficioya.worker.dto.WorkerUpdateRequest;
+import com.oficioya.worker.dto.WorkerStatusRequest;
 import com.oficioya.worker.dto.WorkerZonesResponse;
 import com.oficioya.worker.mapper.WorkerDtoMapper;
 import com.oficioya.worker.model.WorkerModel;
@@ -68,11 +69,21 @@ public class WorkerController {
                 workerService.findByUserId(UUID.fromString(authentication.getName()))));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication))")
-    @PutMapping("/{id}")
-    @Operation(summary = "Actualizar trabajador", description = "Modifica la información de un trabajador que no esté Inactivo")
-    public ResponseEntity<WorkerResponse> update(@PathVariable UUID id, @Valid @RequestBody WorkerUpdateRequest request) {
-        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.update(id, workerDtoMapper.toModel(request))));
+    @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")
+    @PutMapping("/{id}/availability-now")
+    @Operation(summary = "Cambiar disponible ahora", description = "El trabajador marca si está disponible en este momento")
+    public ResponseEntity<WorkerResponse> setAvailableNow(@PathVariable UUID id,
+                                                        @Valid @RequestBody AvailabilityNowRequest request) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(
+                workerService.setAvailableNow(id, request.availableNow())));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Cambiar estado", description = "Pausa o reactiva al trabajador; solo ADMIN")
+    public ResponseEntity<WorkerResponse> changeStatus(@PathVariable UUID id,
+                                                    @Valid @RequestBody WorkerStatusRequest request) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.changeStatus(id, request.status())));
     }
 
     @GetMapping("/{id}/zones")

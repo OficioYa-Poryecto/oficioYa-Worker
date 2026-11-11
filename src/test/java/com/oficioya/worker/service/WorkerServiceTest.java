@@ -227,59 +227,51 @@ class WorkerServiceTest {
     // ---- update ----
 
     @Test
-    @DisplayName("Al pausar el perfil deja de estar disponible ahora")
-    void shouldClearAvailableNowWhenPaused() {
-        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
-        worker.setAvailableNow(true);
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+    @DisplayName("Marca al trabajador como disponible ahora")
+    void shouldSetAvailableNow() {
+        UUID id = UUID.randomUUID();
+        Worker worker = worker(id, UUID.randomUUID(), WorkerStatus.ACTIVE);
+        when(workerRepository.findById(id)).thenReturn(Optional.of(worker));
         when(workerRepository.save(worker)).thenReturn(worker);
 
-        WorkerModel changes = new WorkerModel();
-        changes.setStatus(WorkerStatus.PAUSED);
-        changes.setAvailableNow(true);
-        WorkerModel result = workerService.update(WORKER_ID, changes);
+        assertTrue(workerService.setAvailableNow(id, true).isAvailableNow());
+    }
+
+    @Test
+    @DisplayName("Un perfil pausado no puede cambiar su disponibilidad")
+    void shouldNotChangeAvailabilityWhenPaused() {
+        UUID id = UUID.randomUUID();
+        when(workerRepository.findById(id))
+                .thenReturn(Optional.of(worker(id, UUID.randomUUID(), WorkerStatus.PAUSED)));
+
+        assertThrows(BusinessRuleException.class, () -> workerService.setAvailableNow(id, true));
+        verify(workerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Al pausar el perfil deja de estar disponible ahora")
+    void shouldClearAvailableNowWhenPaused() {
+        UUID id = UUID.randomUUID();
+        Worker worker = worker(id, UUID.randomUUID(), WorkerStatus.ACTIVE);
+        worker.setAvailableNow(true);
+        when(workerRepository.findById(id)).thenReturn(Optional.of(worker));
+        when(workerRepository.save(worker)).thenReturn(worker);
+
+        WorkerModel result = workerService.changeStatus(id, WorkerStatus.PAUSED);
 
         assertEquals(WorkerStatus.PAUSED, result.getStatus());
         assertFalse(result.isAvailableNow());
     }
 
     @Test
-    @DisplayName("Marca al trabajador como disponible ahora conservando su estado")
-    void shouldUpdateAvailableNow() {
-        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
-        when(workerRepository.save(worker)).thenReturn(worker);
-
-        WorkerModel changes = new WorkerModel();
-        changes.setAvailableNow(true);
-        WorkerModel result = workerService.update(WORKER_ID, changes);
-
-        assertEquals(WorkerStatus.ACTIVE, result.getStatus());
-        assertTrue(result.isAvailableNow());
-    }
-
-    @Test
-    @DisplayName("Un perfil pausado solo se puede reactivar")
-    void shouldOnlyReactivatePausedWorker() {
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
-
-        WorkerModel changes = new WorkerModel();
-        changes.setAvailableNow(true);
-
-        assertThrows(BusinessRuleException.class, () -> workerService.update(WORKER_ID, changes));
-        verify(workerRepository, never()).save(any());
-    }
-
-    @Test
     @DisplayName("Reactiva un perfil pausado")
     void shouldReactivatePausedWorker() {
-        Worker worker = worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED);
-        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        UUID id = UUID.randomUUID();
+        Worker worker = worker(id, UUID.randomUUID(), WorkerStatus.PAUSED);
+        when(workerRepository.findById(id)).thenReturn(Optional.of(worker));
         when(workerRepository.save(worker)).thenReturn(worker);
 
-        WorkerModel changes = new WorkerModel();
-        changes.setStatus(WorkerStatus.ACTIVE);
-        assertEquals(WorkerStatus.ACTIVE, workerService.update(WORKER_ID, changes).getStatus());
+        assertEquals(WorkerStatus.ACTIVE, workerService.changeStatus(id, WorkerStatus.ACTIVE).getStatus());
     }
 
     // ---- zonas ----

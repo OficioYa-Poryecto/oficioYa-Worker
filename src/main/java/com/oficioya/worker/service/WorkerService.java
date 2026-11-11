@@ -113,21 +113,26 @@ public class WorkerService {
     }
 
     @Transactional
-    public WorkerModel update(UUID id, WorkerModel model) {
+    public WorkerModel setAvailableNow(UUID id, boolean availableNow) {
         Worker worker = getWorkerOrThrow(id);
-        WorkerStatus newStatus = model.getStatus() != null ? model.getStatus() : worker.getStatus();
-
-        if (worker.getStatus() == WorkerStatus.PAUSED && newStatus != WorkerStatus.ACTIVE) {
+        if (worker.getStatus() == WorkerStatus.PAUSED) {
             log.warn("Worker {} is paused and cannot be modified", id);
-            throw new BusinessRuleException("The worker is paused; it can only be reactivated");
+            throw new BusinessRuleException("The worker is paused; it cannot be modified");
         }
+        worker.setAvailableNow(availableNow);
+        log.info("Worker {} availableNow set to {}", id, availableNow);
+        return buildModel(workerRepository.save(worker));
+    }
 
-        worker.setStatus(newStatus);
-        worker.setAvailableNow(newStatus == WorkerStatus.PAUSED ? false : model.isAvailableNow());
-        Worker saved = workerRepository.save(worker);
-
-        log.info("Worker updated: {} (status {})", id, newStatus);
-        return buildModel(saved);
+    @Transactional
+    public WorkerModel changeStatus(UUID id, WorkerStatus status) {
+        Worker worker = getWorkerOrThrow(id);
+        worker.setStatus(status);
+        if (status == WorkerStatus.PAUSED) {
+            worker.setAvailableNow(false);
+        }
+        log.info("Worker {} status changed to {}", id, status);
+        return buildModel(workerRepository.save(worker));
     }
 
     // Arma el modelo completo: el mapper copia los campos planos y aquí se cargan las listas
