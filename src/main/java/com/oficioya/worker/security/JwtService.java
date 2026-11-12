@@ -33,34 +33,17 @@ public class JwtService {
     private static final int MIN_SECRET_LENGTH = 32;   // 256 bits, lo mínimo para HS256
 
     private final SecretKey key;
-    private final Duration expiration;
     private final Clock clock;
 
     @Autowired
-    public JwtService(@Value("${security.jwt.secret}") String secret,
-                      @Value("${security.jwt.expiration-minutes:60}") long expirationMinutes) {
-        this(secret, Duration.ofMinutes(expirationMinutes), Clock.systemUTC());
+    public JwtService(@Value("${security.jwt.secret}") String secret) {
+        this(secret, Clock.systemUTC());
     }
 
     // El reloj se inyecta para poder probar tokens expirados
-    JwtService(String secret, Duration expiration, Clock clock) {
+    JwtService(String secret, Clock clock) {
         this.key = Keys.hmacShaKeyFor(decodeSecret(secret));
-        this.expiration = expiration;
         this.clock = clock;
-    }
-
-    public String generateToken(UUID userId, Collection<String> roles) {
-        if (userId == null || roles == null || roles.isEmpty()) {
-            throw new IllegalArgumentException("User id and roles are required to generate a token");
-        }
-        Instant now = clock.instant();
-        return Jwts.builder()
-                .subject(userId.toString())
-                .claim(ROLES_CLAIM, roles.stream().map(this::normalizeRole).toList())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(expiration)))
-                .signWith(key, Jwts.SIG.HS256)
-                .compact();
     }
 
     // Valida firma y expiración y devuelve los claims; lanza InvalidTokenException si algo falla

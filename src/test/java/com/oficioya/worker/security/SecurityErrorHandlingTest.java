@@ -82,9 +82,7 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Token expirado: 401 con el motivo")
     void tokenExpiradoResponde401() throws Exception {
-        String expired = new JwtService(secret, Duration.ofMinutes(1),
-                Clock.fixed(Instant.now().minus(Duration.ofHours(2)), ZoneOffset.UTC))
-                .generateToken(WORKER_OWNER_ID, List.of("TRABAJADOR"));
+        String expired = TestTokens.generate(secret, Clock.fixed(Instant.now().minus(Duration.ofHours(2)), ZoneOffset.UTC), Duration.ofMinutes(1), WORKER_OWNER_ID, "TRABAJADOR");
 
         mockMvc.perform(get("/api/v1/trades").header("Authorization", "Bearer " + expired))
                 .andExpect(status().isUnauthorized())
@@ -94,8 +92,12 @@ class SecurityErrorHandlingTest {
     @Test
     @DisplayName("Token firmado con otra clave: 401")
     void tokenConOtraClaveResponde401() throws Exception {
-        String forged = new JwtService("We/1asgXaeGjNIlEg46FASYfiUOMXaBoubgHp3vfU7urTh+6DIIhii0ElNuCzBWD", Duration.ofMinutes(60),
-                Clock.systemUTC()).generateToken(ADMIN_ID, List.of("ADMIN"));
+        String forged = TestTokens.generate(
+            "We/1asgXaeGjNIlEg46FASYfiUOMXaBoubgHp3vfU7urTh+6DIIhii0ElNuCzBWD",
+            Clock.systemUTC(),
+            Duration.ofMinutes(5),
+            ADMIN_ID,
+            "ADMIN");
 
         mockMvc.perform(get("/api/v1/trades").header("Authorization", "Bearer " + forged))
                 .andExpect(status().isUnauthorized())
@@ -201,6 +203,6 @@ class SecurityErrorHandlingTest {
     }
 
     private String bearer(UUID userId, String role) {
-        return "Bearer " + jwtService.generateToken(userId, List.of(role));
+        return "Bearer " + TestTokens.generate(secret, userId, role);
     }
 }
