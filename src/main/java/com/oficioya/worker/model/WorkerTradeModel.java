@@ -1,10 +1,11 @@
 package com.oficioya.worker.model;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 import jakarta.validation.constraints.*;
 
 public class WorkerTradeModel {
-    private Long id;
+    private UUID id;
     @NotNull
     private BigDecimal approxRate;
     @NotNull
@@ -15,18 +16,18 @@ public class WorkerTradeModel {
     public WorkerTradeModel() {
     }
 
-    public WorkerTradeModel(Long id, BigDecimal approxRate, RateUnit rateUnit, TradeModel trade) {
+    public WorkerTradeModel(UUID id, BigDecimal approxRate, RateUnit rateUnit, TradeModel trade) {
         this.id = id;
         this.approxRate = approxRate;
         this.rateUnit = rateUnit;
         this.trade = trade;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

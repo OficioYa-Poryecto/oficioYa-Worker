@@ -36,6 +36,7 @@
 		<sonar.projectName>oficioya-worker</sonar.projectName>
 		<sonar.host.url>http://localhost:9000</sonar.host.url>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.coverage.exclusions>**/*MapperImpl.java,**/WorkerApplication.java</sonar.coverage.exclusions>
 	</properties>
 
 	<dependencies>
@@ -193,6 +194,12 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<excludes>
+								<exclude>**/*MapperImpl.class</exclude>
+								<exclude>**/WorkerApplication.class</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 					<execution>
 						<id>jacoco-check</id>
@@ -201,6 +208,10 @@
 							<goal>check</goal>
 						</goals>
 						<configuration>
+							<excludes>
+								<exclude>**/*MapperImpl.class</exclude>
+								<exclude>**/WorkerApplication.class</exclude>
+							</excludes>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>

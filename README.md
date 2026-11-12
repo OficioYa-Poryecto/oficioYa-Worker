@@ -14,7 +14,7 @@ La aplicación no trae credenciales en el código. Si falta una variable obligat
 | `DB_URL` | Sí | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5432/oficioya_worker` |
 | `DB_USER` | Sí | Usuario de la base de datos | `oficioya` |
 | `DB_PASSWORD` | Sí | Contraseña de la base de datos | — |
-| `JWT_SECRET` | Sí | Clave HS256 para validar los tokens. Debe ser **la misma que usa Identity** para firmarlos. Mínimo 32 caracteres | — |
+| `JWT_SECRET` | Sí | Clave HS256 en **Base64** (mínimo 32 bytes ya decodificados). Debe ser **la misma que usa Identity** para firmar los tokens | — |
 | `JWT_EXPIRATION_MINUTES` | No (60) | Vigencia de los tokens que genere este servicio | `60` |
 | `PUBLIC_QUERIES` | No (`false`) | `true` permite los GET de consulta (catálogo, trabajadores, disponibilidad, fotos) sin token | `false` |
 
@@ -40,13 +40,12 @@ $env:DB_URL="jdbc:postgresql://localhost:5432/oficioya_worker"; $env:DB_USER="..
 ./mvnw spring-boot:run
 ```
 
-Swagger UI: `http://localhost:8080/swagger-ui.html` (público).
+Swagger UI: `http://localhost:8082/swagger-ui.html` (público).
 
 ## Seguridad
 
 - Autenticación con `Authorization: Bearer <token>`. Este servicio **no tiene login**: los tokens los emite Identity.
-- Claims usados: `sub` = id del usuario y `role` = `TRABAJADOR`, `CONTRATANTE` o `ADMIN`
-  (supuesto pendiente de confirmar con Identity; se leen en un único método, `JwtService.toClaims`).
+- Claims usados: `sub` = UUID del usuario y `roles` = lista con `TRABAJADOR`, `CONTRATANTE` y/o `ADMIN`. Firma HS256 con el secreto en Base64.
 - Reglas:
   - Solo `ADMIN` gestiona el catálogo de oficios y categorías.
   - Cada `TRABAJADOR` solo modifica su propio perfil (oficios, tarifas, zonas, disponibilidad y fotos).
@@ -83,6 +82,7 @@ Todos los errores responden con el mismo formato:
 - El reporte queda en `target/site/jacoco/index.html` (HTML) y `target/site/jacoco/jacoco.xml` (el que lee SonarQube).
 - `verify` falla si la cobertura de líneas baja del 80%.
 - `lombok.config` evita que se cuente el código que genera Lombok.
+- **Exclusiones (documentadas):** `*MapperImpl` (código generado por MapStruct), `WorkerApplication` (solo arranca Spring, sin lógica) y el código generado por Lombok (marcado con `@Generated` en `lombok.config`).
 
 ### Análisis con SonarQube (local)
 
@@ -117,31 +117,4 @@ Notas:
 > Si el proyecto está dentro de OneDrive, la sincronización puede corromper los `.class` de `target/` y producir
 > fallos intermitentes (`NoClassDefFoundError`, beans de mappers no encontrados). Excluye `target/` de la
 > sincronización o trabaja el proyecto fuera de OneDrive.
-
-
-201 created 
-<img width="945" height="1021" alt="image" src="https://github.com/user-attachments/assets/fc805b9e-41b0-4c54-b230-77b2a771da17" />
-
-409 ya existe
-<img width="956" height="1027" alt="image" src="https://github.com/user-attachments/assets/ecf505db-d456-46cf-96c9-01b710ec8e01" />
-
-200 ok 
-
-<img width="953" height="1021" alt="image" src="https://github.com/user-attachments/assets/05b3e5a4-6a60-4206-95d7-d4b559bedf98" />
-
-201 created
-<img width="952" height="1017" alt="image" src="https://github.com/user-attachments/assets/bef46c0c-92d2-4239-8885-6215bc8f621e" />
-
-201 created 
-<img width="951" height="1025" alt="image" src="https://github.com/user-attachments/assets/f717713f-30c4-4ae9-a6f2-8466a706fbfd" />
-
-200 ok
-
-<img width="956" height="1013" alt="image" src="https://github.com/user-attachments/assets/ed6fbb23-0e5d-4c7f-8781-295717dd5ae5" />
-
-400 bad requested 
-<img width="952" height="1024" alt="image" src="https://github.com/user-attachments/assets/7d483a82-ad5a-491f-ba9e-9199f6272a47" />
-
-
-
 

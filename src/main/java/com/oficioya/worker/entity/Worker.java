@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "workers")
@@ -17,11 +18,11 @@ import java.util.Set;
 public class Worker {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "user_id", nullable = false, unique = true)
-    private Long userId;
+    private UUID userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

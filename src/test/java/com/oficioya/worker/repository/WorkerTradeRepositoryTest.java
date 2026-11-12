@@ -14,12 +14,15 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
 class WorkerTradeRepositoryTest {
+
+    private static final UUID USER_ID = UUID.randomUUID();
 
     @Autowired
     private WorkerTradeRepository workerTradeRepository;
@@ -35,7 +38,7 @@ class WorkerTradeRepositoryTest {
 
     private Worker saveWorker() {
         Worker worker = new Worker();
-        worker.setUserId(1L);
+        worker.setUserId(USER_ID);
         worker.setStatus(WorkerStatus.ACTIVE);
         worker.setAvailableNow(false);
         return workerRepository.save(worker);

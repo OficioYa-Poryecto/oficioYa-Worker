@@ -49,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             JwtClaims claims = jwtService.validateToken(header.substring(BEARER_PREFIX.length()).trim());
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     claims.userId().toString(), null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + claims.role())));
+                    claims.roles().stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role)).toList());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContext context = SecurityContextHolder.createEmptyContext();

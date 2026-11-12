@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class AvailabilitySlotService {
@@ -30,14 +31,14 @@ public class AvailabilitySlotService {
         this.slotMapper = slotMapper;
     }
 
-    public List<AvailabilitySlotModel> findAll(Long workerId) {
+    public List<AvailabilitySlotModel> findAll(UUID workerId) {
         getWorkerOrThrow(workerId);
         log.debug("Listing availability slots of worker {}", workerId);
         return slotMapper.toModelList(slotRepository.findByWorkerId(workerId));
     }
 
     @Transactional
-    public AvailabilitySlotModel create(Long workerId, AvailabilitySlotModel model) {
+    public AvailabilitySlotModel create(UUID workerId, AvailabilitySlotModel model) {
         Worker worker = getActiveWorkerOrThrow(workerId);
         AvailabilitySlot entity = slotMapper.toEntity(model);
         entity.setId(null);
@@ -50,7 +51,7 @@ public class AvailabilitySlotService {
     }
 
     @Transactional
-    public AvailabilitySlotModel update(Long workerId, Long slotId, AvailabilitySlotModel model) {
+    public AvailabilitySlotModel update(UUID workerId, UUID slotId, AvailabilitySlotModel model) {
         getActiveWorkerOrThrow(workerId);
         AvailabilitySlot entity = getSlotOrThrow(workerId, slotId);
         entity.setRecurrenceType(model.getRecurrenceType());
@@ -67,7 +68,7 @@ public class AvailabilitySlotService {
     }
 
     @Transactional
-    public void delete(Long workerId, Long slotId) {
+    public void delete(UUID workerId, UUID slotId) {
         getActiveWorkerOrThrow(workerId);
         slotRepository.delete(getSlotOrThrow(workerId, slotId));
         log.info("Availability slot {} deleted", slotId);
@@ -90,7 +91,7 @@ public class AvailabilitySlotService {
         }
     }
 
-    private void checkOverlap(AvailabilitySlot candidate, Long ignoredId) {
+    private void checkOverlap(AvailabilitySlot candidate, UUID ignoredId) {
         for (AvailabilitySlot other : slotRepository.findByWorkerId(candidate.getWorker().getId())) {
             if (other.getId().equals(ignoredId)) {
                 continue;
@@ -120,14 +121,14 @@ public class AvailabilitySlotService {
         return slot.getRecurrenceType() == RecurrenceType.FIXED ? slot.getStartDate() : slot.getEndDate();
     }
 
-    private Worker getWorkerOrThrow(Long id) {
+    private Worker getWorkerOrThrow(UUID id) {
         return workerRepository.findById(id).orElseThrow(() -> {
             log.warn("Worker not found: {}", id);
             return new ResourceNotFoundException("Worker not found: " + id);
         });
     }
 
-    private Worker getActiveWorkerOrThrow(Long id) {
+    private Worker getActiveWorkerOrThrow(UUID id) {
         Worker worker = getWorkerOrThrow(id);
         if (worker.getStatus() == WorkerStatus.PAUSED) {
             log.warn("Worker {} is paused and cannot be modified", id);
@@ -136,7 +137,7 @@ public class AvailabilitySlotService {
         return worker;
     }
 
-    private AvailabilitySlot getSlotOrThrow(Long workerId, Long slotId) {
+    private AvailabilitySlot getSlotOrThrow(UUID workerId, UUID slotId) {
         return slotRepository.findById(slotId)
                 .filter(s -> s.getWorker().getId().equals(workerId))
                 .orElseThrow(() -> {

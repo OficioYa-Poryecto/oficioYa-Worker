@@ -12,12 +12,15 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class JwtAuthenticationFilterTest {
 
-    private static final String SECRET = "clave-de-pruebas-oficioya-worker-no-usar-en-produccion";
+    private static final String SECRET = "dYlRTaT2AQf18RwfAXJDSrV9tpEsezC7GlB457788l0Q8opvjH5thxdl5f7vO2Dc";
+    private static final UUID USER_ID = UUID.randomUUID();
 
     private final JwtService jwtService = new JwtService(SECRET, Duration.ofMinutes(60), Clock.systemUTC());
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService);
@@ -31,14 +34,14 @@ class JwtAuthenticationFilterTest {
     @DisplayName("Con un token válido autentica al usuario con su id como nombre y su rol")
     void shouldAuthenticateWithValidToken() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer " + jwtService.generateToken(10L, "TRABAJADOR"));
+        request.addHeader("Authorization", "Bearer " + jwtService.generateToken(USER_ID, List.of("TRABAJADOR")));
         MockFilterChain chain = new MockFilterChain();
 
         filter.doFilter(request, new MockHttpServletResponse(), chain);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertNotNull(auth);
-        assertEquals("10", auth.getName());
+        assertEquals(USER_ID.toString(), auth.getName());
         assertTrue(auth.getAuthorities().stream().map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_TRABAJADOR"::equals));
         assertNotNull(chain.getRequest(), "la cadena debe continuar");

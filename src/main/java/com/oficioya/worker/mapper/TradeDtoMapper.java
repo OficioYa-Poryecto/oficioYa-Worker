@@ -9,6 +9,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
+import java.util.UUID;
 
 @Mapper(componentModel = "spring", uses = TradeCategoryDtoMapper.class,
         injectionStrategy = InjectionStrategy.CONSTRUCTOR)
@@ -23,7 +24,7 @@ public interface TradeDtoMapper {
     List<TradeResponse> toResponseList(List<TradeModel> models);
 
     // El request solo trae el id de la categoría; el service la carga del repositorio
-    default TradeCategoryModel categoryFromId(Long categoryId) {
+    default TradeCategoryModel categoryFromId(UUID categoryId) {
         if (categoryId == null) {
             return null;
         }

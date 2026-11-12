@@ -1,10 +1,12 @@
 package com.oficioya.worker.controller;
 
+import com.oficioya.worker.dto.AvailabilityNowRequest;
 import com.oficioya.worker.dto.WorkerCreateRequest;
 import com.oficioya.worker.dto.WorkerResponse;
-import com.oficioya.worker.dto.WorkerUpdateRequest;
+import com.oficioya.worker.dto.WorkerStatusRequest;
 import com.oficioya.worker.dto.WorkerZonesResponse;
 import com.oficioya.worker.mapper.WorkerDtoMapper;
+import com.oficioya.worker.model.WorkerModel;
 import com.oficioya.worker.service.WorkerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.math.BigDecimal;
 import java.util.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/v1/workers")
@@ -31,17 +34,20 @@ public class WorkerController {
     }
 
     // El perfil se crea solo para el usuario del token
-    @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isSelf(#request.userId(), authentication)")
+    @PreAuthorize("hasRole('TRABAJADOR')")
     @PostMapping
     @Operation(summary = "Crear trabajador", description = "Registra un trabajador nuevo con estado Activo")
-    public ResponseEntity<WorkerResponse> create(@Valid @RequestBody WorkerCreateRequest request) {
+    public ResponseEntity<WorkerResponse> create(@Valid @RequestBody WorkerCreateRequest request,
+                                                Authentication authentication) {
+        WorkerModel model = workerDtoMapper.toModel(request);
+        model.setUserId(UUID.fromString(authentication.getName()));
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(workerDtoMapper.toResponse(workerService.create(workerDtoMapper.toModel(request))));
+                .body(workerDtoMapper.toResponse(workerService.create(model)));
     }
 
     @GetMapping
     @Operation(summary = "buscar trabajadores", description = "Devuelve todos los trabajadores registrados segun ciertos parametros")
-    public ResponseEntity<List<WorkerResponse>> search(@RequestParam(required = false) Long tradeId,
+    public ResponseEntity<List<WorkerResponse>> search(@RequestParam(required = false) UUID tradeId,
                                                        @RequestParam(required = false) Long zoneId,
                                                        @RequestParam(required = false) BigDecimal maxRate,
                                                        @RequestParam(required = false) Boolean availableNow) {
@@ -51,27 +57,45 @@ public class WorkerController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener trabajador por ID", description = "Devuelve un trabajador según su identificador")
-    public ResponseEntity<WorkerResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<WorkerResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.findById(id)));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication))")
-    @PutMapping("/{id}")
-    @Operation(summary = "Actualizar trabajador", description = "Modifica la información de un trabajador que no esté Inactivo")
-    public ResponseEntity<WorkerResponse> update(@PathVariable Long id, @Valid @RequestBody WorkerUpdateRequest request) {
-        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.update(id, workerDtoMapper.toModel(request))));
+    @PreAuthorize("hasRole('TRABAJADOR')")
+    @GetMapping("/me")
+    @Operation(summary = "Obtener mi perfil", description = "Devuelve el perfil del trabajador autenticado; 404 si aún no lo ha creado")
+    public ResponseEntity<WorkerResponse> findMe(Authentication authentication) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(
+                workerService.findByUserId(UUID.fromString(authentication.getName()))));
+    }
+
+    @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")
+    @PutMapping("/{id}/availability-now")
+    @Operation(summary = "Cambiar disponible ahora", description = "El trabajador marca si está disponible en este momento")
+    public ResponseEntity<WorkerResponse> setAvailableNow(@PathVariable UUID id,
+                                                        @Valid @RequestBody AvailabilityNowRequest request) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(
+                workerService.setAvailableNow(id, request.availableNow())));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Cambiar estado", description = "Pausa o reactiva al trabajador; solo ADMIN")
+    public ResponseEntity<WorkerResponse> changeStatus(@PathVariable UUID id,
+                                                    @Valid @RequestBody WorkerStatusRequest request) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.changeStatus(id, request.status())));
     }
 
     @GetMapping("/{id}/zones")
     @Operation(summary = "Listar zonas del trabajador", description = "Devuelve los IDs de las zonas donde trabaja")
-    public ResponseEntity<WorkerZonesResponse> findZones(@PathVariable Long id) {
+    public ResponseEntity<WorkerZonesResponse> findZones(@PathVariable UUID id) {
         return ResponseEntity.ok(new WorkerZonesResponse(id, workerService.findZones(id)));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")
     @PutMapping("/{id}/zones/{zoneId}")
     @Operation(summary = "Agregar zona al trabajador", description = "Asocia una zona de cobertura al trabajador")
-    public ResponseEntity<Void> addZone(@PathVariable Long id, @PathVariable Long zoneId) {
+    public ResponseEntity<Void> addZone(@PathVariable UUID id, @PathVariable Long zoneId) {
         workerService.addZone(id, zoneId);
         return ResponseEntity.noContent().build();
     }
@@ -79,7 +103,7 @@ public class WorkerController {
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")
     @DeleteMapping("/{id}/zones/{zoneId}")
     @Operation(summary = "Quitar zona del trabajador", description = "Elimina la asociación entre el trabajador y la zona")
-    public ResponseEntity<Void> removeZone(@PathVariable Long id, @PathVariable Long zoneId) {
+    public ResponseEntity<Void> removeZone(@PathVariable UUID id, @PathVariable Long zoneId) {
         workerService.removeZone(id, zoneId);
         return ResponseEntity.noContent().build();
     }
