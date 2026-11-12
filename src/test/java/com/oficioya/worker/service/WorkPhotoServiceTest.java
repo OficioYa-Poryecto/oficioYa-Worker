@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +28,14 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WorkPhotoServiceTest {
+
+    private static final UUID WORKER_ID = UUID.randomUUID();
+    private static final UUID OTHER_WORKER_ID = UUID.randomUUID();
+    private static final UUID UNKNOWN_WORKER_ID = UUID.randomUUID();
+    private static final UUID PHOTO_ID = UUID.randomUUID();
+    private static final UUID OTHER_PHOTO_ID = UUID.randomUUID();
+    private static final UUID UNKNOWN_PHOTO_ID = UUID.randomUUID();
+    private static final UUID SAVED_PHOTO_ID = UUID.randomUUID();
 
     @Mock private WorkerRepository workerRepository;
     @Mock private WorkPhotoRepository photoRepository;
@@ -38,11 +47,11 @@ class WorkPhotoServiceTest {
     void setUp() {
         photoService = new WorkPhotoService(workerRepository, photoRepository, new WorkPhotoMapperImpl());
         worker = new Worker();
-        worker.setId(1L);
+        worker.setId(WORKER_ID);
         worker.setStatus(WorkerStatus.ACTIVE);
     }
 
-    private WorkPhoto photo(Long id, Worker owner) {
+    private WorkPhoto photo(UUID id, Worker owner) {
         WorkPhoto photo = new WorkPhoto();
         photo.setId(id);
         photo.setWorker(owner);
@@ -54,21 +63,21 @@ class WorkPhotoServiceTest {
     @Test
     @DisplayName("Registra la foto con la fecha de carga del servidor")
     void shouldCreatePhoto() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
         when(photoRepository.save(any(WorkPhoto.class))).thenAnswer(inv -> {
             WorkPhoto saved = inv.getArgument(0);
-            saved.setId(30L);
+            saved.setId(SAVED_PHOTO_ID);
             return saved;
         });
         LocalDateTime fechaDelCliente = LocalDateTime.of(2000, 1, 1, 0, 0);
 
-        WorkPhotoModel result = photoService.create(1L,
-                new WorkPhotoModel(99L, "https://fotos.example.com/1.jpg", "Baño", fechaDelCliente));
+        WorkPhotoModel result = photoService.create(WORKER_ID,
+                new WorkPhotoModel(UNKNOWN_PHOTO_ID, "https://fotos.example.com/1.jpg", "Baño", fechaDelCliente));
 
         ArgumentCaptor<WorkPhoto> captor = ArgumentCaptor.forClass(WorkPhoto.class);
         verify(photoRepository).save(captor.capture());
         assertSame(worker, captor.getValue().getWorker());
-        assertEquals(30L, result.getId());
+        assertEquals(SAVED_PHOTO_ID, result.getId());
         assertNotEquals(fechaDelCliente, result.getUploadedAt(), "la fecha la pone el servidor");
     }
 
@@ -76,38 +85,38 @@ class WorkPhotoServiceTest {
     @DisplayName("Un trabajador pausado no puede subir fotos")
     void shouldRejectPausedWorker() {
         worker.setStatus(WorkerStatus.PAUSED);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
 
         assertThrows(BusinessRuleException.class,
-                () -> photoService.create(1L, new WorkPhotoModel(null, "https://x.com/a.jpg", null, null)));
+                () -> photoService.create(WORKER_ID, new WorkPhotoModel(null, "https://x.com/a.jpg", null, null)));
         verifyNoInteractions(photoRepository);
     }
 
     @Test
     @DisplayName("Lista las fotos del trabajador")
     void shouldListPhotos() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(photoRepository.findByWorkerId(1L)).thenReturn(List.of(photo(1L, worker), photo(2L, worker)));
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(photoRepository.findByWorkerId(WORKER_ID)).thenReturn(List.of(photo(PHOTO_ID, worker), photo(OTHER_PHOTO_ID, worker)));
 
-        assertEquals(2, photoService.findAll(1L).size());
+        assertEquals(2, photoService.findAll(WORKER_ID).size());
     }
 
     @Test
     @DisplayName("Listar las fotos de un trabajador inexistente lanza ResourceNotFoundException")
     void shouldFailListingUnknownWorker() {
-        when(workerRepository.findById(99L)).thenReturn(Optional.empty());
+        when(workerRepository.findById(UNKNOWN_WORKER_ID)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> photoService.findAll(99L));
+        assertThrows(ResourceNotFoundException.class, () -> photoService.findAll(UNKNOWN_WORKER_ID));
     }
 
     @Test
     @DisplayName("Elimina una foto propia")
     void shouldDeleteOwnPhoto() {
-        WorkPhoto propia = photo(5L, worker);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(photoRepository.findById(5L)).thenReturn(Optional.of(propia));
+        WorkPhoto propia = photo(PHOTO_ID, worker);
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(photoRepository.findById(PHOTO_ID)).thenReturn(Optional.of(propia));
 
-        photoService.delete(1L, 5L);
+        photoService.delete(WORKER_ID, PHOTO_ID);
 
         verify(photoRepository).delete(propia);
     }
@@ -116,20 +125,20 @@ class WorkPhotoServiceTest {
     @DisplayName("No elimina una foto de otro trabajador")
     void shouldNotDeletePhotoOfAnotherWorker() {
         Worker otro = new Worker();
-        otro.setId(2L);
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(photoRepository.findById(6L)).thenReturn(Optional.of(photo(6L, otro)));
+        otro.setId(OTHER_WORKER_ID);
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(photoRepository.findById(OTHER_PHOTO_ID)).thenReturn(Optional.of(photo(OTHER_PHOTO_ID, otro)));
 
-        assertThrows(ResourceNotFoundException.class, () -> photoService.delete(1L, 6L));
+        assertThrows(ResourceNotFoundException.class, () -> photoService.delete(WORKER_ID, OTHER_PHOTO_ID));
         verify(photoRepository, never()).delete(any());
     }
 
     @Test
     @DisplayName("Eliminar una foto inexistente lanza ResourceNotFoundException")
     void shouldFailDeletingUnknownPhoto() {
-        when(workerRepository.findById(1L)).thenReturn(Optional.of(worker));
-        when(photoRepository.findById(77L)).thenReturn(Optional.empty());
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+        when(photoRepository.findById(UNKNOWN_PHOTO_ID)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> photoService.delete(1L, 77L));
+        assertThrows(ResourceNotFoundException.class, () -> photoService.delete(WORKER_ID, UNKNOWN_PHOTO_ID));
     }
 }

@@ -1,9 +1,10 @@
 package com.oficioya.worker.model;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class WorkPhotoModel {
-    private Long id;
+    private UUID id;
     private String url;
     private String description;
     private LocalDateTime uploadedAt;
@@ -11,18 +12,18 @@ public class WorkPhotoModel {
     public WorkPhotoModel() {
     }
 
-    public WorkPhotoModel(Long id, String url, String description, LocalDateTime uploadedAt) {
+    public WorkPhotoModel(UUID id, String url, String description, LocalDateTime uploadedAt) {
         this.id = id;
         this.url = url;
         this.description = description;
         this.uploadedAt = uploadedAt;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

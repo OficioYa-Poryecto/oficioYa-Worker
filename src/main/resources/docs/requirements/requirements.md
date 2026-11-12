@@ -26,13 +26,13 @@ El sistema de OficioYa debe tener:
 
 1. Documentar cómo otros dominios pueden consultar la información de trabajadores, para que si algo cambia en Worker, no se rompa lo que usan otros equipos.
 2. Poder agregar nuevos oficios o categorías fácilmente, sin rediseñar el sistema.
-3. Las consultas que hacen otros dominios deben responder sin demoras que afecten la experiencia de búsqueda.
-4. Los formularios para registrar oficios, tarifa y cobertura deben ser fáciles de usar. Los campos obligatorios se identifican con asterisco (*) y la tarifa se muestra con el símbolo de pesos ($).
+3. Los formularios para registrar oficios, tarifa y cobertura deben ser fáciles de usar para el usuario. 
+4. Los campos obligatorios se identifican con asterisco (*) y la tarifa se muestra con el símbolo de pesos ($).
 5. Cobertura de pruebas unitarias mínima del 80%. Solo se excluye el código generado (Lombok y las clases `*MapperImpl` de MapStruct) y la clase `WorkerApplication`, y esas exclusiones quedan documentadas.
 6. Toda la interfaz debe ser responsive.
 7. El sistema debe registrar logs de todas las operaciones (no solo búsquedas), con rotación de archivos.
 8. Todos los endpoints deben estar protegidos: exigen un token JWT válido y verifican el rol del usuario (TRABAJADOR, CONTRATANTE o ADMIN) según la operación.
-9. Debe existir una colección de Postman que incluya todos los endpoints del dominio Worker.
+9.  Debe existir una colección de Postman que incluya todos los endpoints del dominio Worker.
 
 ## 2. Diagramas de caso de uso
 

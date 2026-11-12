@@ -7,9 +7,8 @@ import jakarta.validation.constraints.Positive;
 import java.util.HashSet;
 import java.util.Set;
 
-// userId debe ser el del token (lo verifica @PreAuthorize en el controlador)
+// El userId no viaja en el cuerpo: se toma del token
 public record WorkerCreateRequest(
-        @NotNull @Positive Long userId,
         boolean availableNow,
         Set<@NotNull @Positive Long> zoneIds,
         @NotNull @Valid WorkerTradeRequest primaryTrade) {

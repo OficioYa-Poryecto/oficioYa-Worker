@@ -9,6 +9,8 @@ import org.slf4j.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 public class WorkerTradeService {
 
@@ -30,7 +32,7 @@ public class WorkerTradeService {
     }
 
     @Transactional
-    public WorkerTradeModel addSecondary(Long workerId, WorkerTradeModel model) {
+    public WorkerTradeModel addSecondary(UUID workerId, WorkerTradeModel model) {
         Worker worker = getActiveWorkerOrThrow(workerId);
         Trade trade = tradeRepository.findById(model.getTrade().getId()).orElseThrow(() -> {
             log.warn("Trade not found: {}", model.getTrade().getId());
@@ -57,7 +59,7 @@ public class WorkerTradeService {
     }
 
     @Transactional
-    public WorkerTradeModel update(Long workerId, Long workerTradeId, WorkerTradeModel model) {
+    public WorkerTradeModel update(UUID workerId, UUID workerTradeId, WorkerTradeModel model) {
         getActiveWorkerOrThrow(workerId);
         WorkerTrade entity = getWorkerTradeOrThrow(workerId, workerTradeId);
         entity.setApproxRate(model.getApproxRate());
@@ -68,7 +70,7 @@ public class WorkerTradeService {
     }
 
     @Transactional
-    public WorkerTradeModel changePrimary(Long workerId, Long workerTradeId) {
+    public WorkerTradeModel changePrimary(UUID workerId, UUID workerTradeId) {
         getActiveWorkerOrThrow(workerId);
         WorkerTrade newPrimary = getWorkerTradeOrThrow(workerId, workerTradeId);
         if (!newPrimary.isPrimary()) {
@@ -84,7 +86,7 @@ public class WorkerTradeService {
     }
 
     @Transactional
-    public void deleteSecondary(Long workerId, Long workerTradeId) {
+    public void deleteSecondary(UUID workerId, UUID workerTradeId) {
         getActiveWorkerOrThrow(workerId);
         WorkerTrade entity = getWorkerTradeOrThrow(workerId, workerTradeId);
         if (entity.isPrimary()) {
@@ -95,7 +97,7 @@ public class WorkerTradeService {
         log.info("Trade {} removed from worker {}", workerTradeId, workerId);
     }
 
-    private Worker getActiveWorkerOrThrow(Long id) {
+    private Worker getActiveWorkerOrThrow(UUID id) {
         Worker worker = workerRepository.findById(id).orElseThrow(() -> {
             log.warn("Worker not found: {}", id);
             return new ResourceNotFoundException("Worker not found: " + id);
@@ -107,7 +109,7 @@ public class WorkerTradeService {
         return worker;
     }
 
-    private WorkerTrade getWorkerTradeOrThrow(Long workerId, Long workerTradeId) {
+    private WorkerTrade getWorkerTradeOrThrow(UUID workerId, UUID workerTradeId) {
         return workerTradeRepository.findById(workerTradeId)
                 .filter(wt -> wt.getWorker().getId().equals(workerId))
                 .orElseThrow(() -> {

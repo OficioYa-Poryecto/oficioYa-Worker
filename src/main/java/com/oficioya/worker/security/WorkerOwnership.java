@@ -4,6 +4,8 @@ import com.oficioya.worker.repository.WorkerRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
 /**
  * Reglas de propiedad que se usan desde @PreAuthorize, por ejemplo:
  * {@code @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#workerId, authentication)")}.
@@ -22,18 +24,12 @@ public class WorkerOwnership {
 
     // true si el perfil de trabajador pertenece al usuario autenticado.
     // Si el trabajador no existe deja pasar, para que el servicio responda 404.
-    public boolean isOwner(Long workerId, Authentication authentication) {
+    public boolean isOwner(UUID workerId, Authentication authentication) {
         if (workerId == null || authentication == null) {
             return false;
         }
         return workerRepository.findById(workerId)
                 .map(worker -> worker.getUserId().toString().equals(authentication.getName()))
                 .orElse(true);
-    }
-
-    // true si el userId enviado es el del usuario autenticado (no se crean perfiles para otros)
-    public boolean isSelf(Long userId, Authentication authentication) {
-        return userId != null && authentication != null
-                && userId.toString().equals(authentication.getName());
     }
 }

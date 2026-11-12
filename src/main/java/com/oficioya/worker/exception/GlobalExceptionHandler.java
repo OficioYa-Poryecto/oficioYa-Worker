@@ -49,4 +49,10 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {
         return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
     }
+
+        // Users (u otro dominio) no responde o tardó demasiado
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleUnavailable(ExternalServiceUnavailableException ex, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+    }
 }

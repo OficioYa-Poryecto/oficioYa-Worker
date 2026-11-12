@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/trade-categories")
@@ -33,11 +34,26 @@ public class TradeCategoryController {
         return ResponseEntity.ok(categoryDtoMapper.toResponseList(categoryService.findAll()));
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Obtener categoría por ID", description = "Devuelve una categoría según su identificador")
+    public ResponseEntity<TradeCategoryResponse> findById(@PathVariable UUID id) {
+        return ResponseEntity.ok(categoryDtoMapper.toResponse(categoryService.findById(id)));
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @Operation(summary = "Crear categoría", description = "Registra una nueva categoría de oficios")
     public ResponseEntity<TradeCategoryResponse> create(@Valid @RequestBody TradeCategoryRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(categoryDtoMapper.toResponse(categoryService.create(categoryDtoMapper.toModel(request))));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    @Operation(summary = "Actualizar categoría", description = "Modifica el nombre y el detalle de una categoría")
+    public ResponseEntity<TradeCategoryResponse> update(@PathVariable UUID id,
+                                                        @Valid @RequestBody TradeCategoryRequest request) {
+        return ResponseEntity.ok(categoryDtoMapper.toResponse(
+                categoryService.update(id, categoryDtoMapper.toModel(request))));
     }
 }

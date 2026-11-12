@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class WorkPhotoService {
@@ -30,14 +31,14 @@ public class WorkPhotoService {
         this.photoMapper = photoMapper;
     }
 
-    public List<WorkPhotoModel> findAll(Long workerId) {
+    public List<WorkPhotoModel> findAll(UUID workerId) {
         getWorkerOrThrow(workerId);
         log.debug("Listing photos of worker {}", workerId);
         return photoMapper.toModelList(photoRepository.findByWorkerId(workerId));
     }
 
     @Transactional
-    public WorkPhotoModel create(Long workerId, WorkPhotoModel model) {
+    public WorkPhotoModel create(UUID workerId, WorkPhotoModel model) {
         Worker worker = getActiveWorkerOrThrow(workerId);
         WorkPhoto entity = photoMapper.toEntity(model);
         entity.setId(null);
@@ -49,9 +50,9 @@ public class WorkPhotoService {
     }
 
     @Transactional
-    public void delete(Long workerId, Long photoId) {
+    public void delete(UUID workerId, UUID photoId) {
         getActiveWorkerOrThrow(workerId);
-        WorkPhoto photo = photoRepository.findById(photoId)
+        WorkPhoto photo = photoRepository.findById(photoId) 
                 .filter(p -> p.getWorker().getId().equals(workerId))
                 .orElseThrow(() -> {
                     log.warn("Photo {} not found for worker {}", photoId, workerId);
@@ -61,14 +62,14 @@ public class WorkPhotoService {
         log.info("Photo {} deleted", photoId);
     }
 
-    private Worker getWorkerOrThrow(Long id) {
+    private Worker getWorkerOrThrow(UUID id) {
         return workerRepository.findById(id).orElseThrow(() -> {
             log.warn("Worker not found: {}", id);
             return new ResourceNotFoundException("Worker not found: " + id);
         });
     }
 
-    private Worker getActiveWorkerOrThrow(Long id) {
+    private Worker getActiveWorkerOrThrow(UUID id) {
         Worker worker = getWorkerOrThrow(id);
         if (worker.getStatus() == WorkerStatus.PAUSED) {
             log.warn("Worker {} is paused and cannot be modified", id);

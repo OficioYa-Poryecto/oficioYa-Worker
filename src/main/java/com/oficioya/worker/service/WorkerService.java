@@ -47,7 +47,7 @@ public class WorkerService {
         this.photoMapper = photoMapper;
     }
 
-    public List<WorkerModel> search(Long tradeId, Long zoneId, BigDecimal maxRate, Boolean availableNow) {
+    public List<WorkerModel> search(UUID tradeId, Long zoneId, BigDecimal maxRate, Boolean availableNow) {
         log.info("Worker search: tradeId={}, zoneId={}, maxRate={}, availableNow={}",
                 tradeId, zoneId, maxRate, availableNow);
         if (maxRate != null && maxRate.signum() < 0) {
@@ -63,7 +63,7 @@ public class WorkerService {
         return result;
     }
 
-    private boolean matchesTrade(Worker worker, Long tradeId, BigDecimal maxRate) {
+    private boolean matchesTrade(Worker worker, UUID tradeId, BigDecimal maxRate) {
         if (tradeId == null && maxRate == null) {
             return true;
         }
@@ -72,9 +72,17 @@ public class WorkerService {
                         && (maxRate == null || wt.getApproxRate().compareTo(maxRate) <= 0));
     }
 
-    public WorkerModel findById(Long id) {
+    public WorkerModel findById(UUID id) {
         log.debug("Looking for worker with id: {}", id);
         return buildModel(getWorkerOrThrow(id));
+    }
+
+    public WorkerModel findByUserId(UUID userId) {
+        log.debug("Looking for worker profile of user: {}", userId);
+        return buildModel(workerRepository.findByUserId(userId).orElseThrow(() -> {
+            log.warn("Worker profile not found for user: {}", userId);
+            return new ResourceNotFoundException("Worker profile not found for user: " + userId);
+        }));
     }
 
     @Transactional
@@ -105,21 +113,26 @@ public class WorkerService {
     }
 
     @Transactional
-    public WorkerModel update(Long id, WorkerModel model) {
+    public WorkerModel setAvailableNow(UUID id, boolean availableNow) {
         Worker worker = getWorkerOrThrow(id);
-        WorkerStatus newStatus = model.getStatus() != null ? model.getStatus() : worker.getStatus();
-
-        if (worker.getStatus() == WorkerStatus.PAUSED && newStatus != WorkerStatus.ACTIVE) {
+        if (worker.getStatus() == WorkerStatus.PAUSED) {
             log.warn("Worker {} is paused and cannot be modified", id);
-            throw new BusinessRuleException("The worker is paused; it can only be reactivated");
+            throw new BusinessRuleException("The worker is paused; it cannot be modified");
         }
+        worker.setAvailableNow(availableNow);
+        log.info("Worker {} availableNow set to {}", id, availableNow);
+        return buildModel(workerRepository.save(worker));
+    }
 
-        worker.setStatus(newStatus);
-        worker.setAvailableNow(newStatus == WorkerStatus.PAUSED ? false : model.isAvailableNow());
-        Worker saved = workerRepository.save(worker);
-
-        log.info("Worker updated: {} (status {})", id, newStatus);
-        return buildModel(saved);
+    @Transactional
+    public WorkerModel changeStatus(UUID id, WorkerStatus status) {
+        Worker worker = getWorkerOrThrow(id);
+        worker.setStatus(status);
+        if (status == WorkerStatus.PAUSED) {
+            worker.setAvailableNow(false);
+        }
+        log.info("Worker {} status changed to {}", id, status);
+        return buildModel(workerRepository.save(worker));
     }
 
     // Arma el modelo completo: el mapper copia los campos planos y aquí se cargan las listas
@@ -139,26 +152,26 @@ public class WorkerService {
         return model;
     }
 
-    private Worker getWorkerOrThrow(Long id) {
+    private Worker getWorkerOrThrow(UUID id) {
         return workerRepository.findById(id).orElseThrow(() -> {
             log.warn("Worker not found: {}", id);
             return new ResourceNotFoundException("Worker not found: " + id);
         });
     }
 
-    private Trade getTradeOrThrow(Long id) {
+    private Trade getTradeOrThrow(UUID id) {
         return tradeRepository.findById(id).orElseThrow(() -> {
             log.warn("Trade not found: {}", id);
             return new ResourceNotFoundException("Trade not found: " + id);
         });
     }
 
-    public Set<Long> findZones(Long workerId) {
+    public Set<Long> findZones(UUID workerId) {
         return new HashSet<>(getWorkerOrThrow(workerId).getZoneIds());
     }
 
     @Transactional
-    public void addZone(Long workerId, Long zoneId) {
+    public void addZone(UUID workerId, Long zoneId) {
         Worker worker = getActiveWorkerOrThrow(workerId);
         worker.getZoneIds().add(zoneId);
         workerRepository.save(worker);
@@ -166,7 +179,7 @@ public class WorkerService {
     }
 
     @Transactional
-    public void removeZone(Long workerId, Long zoneId) {
+    public void removeZone(UUID workerId, Long zoneId) {
         Worker worker = getActiveWorkerOrThrow(workerId);
         if (!worker.getZoneIds().remove(zoneId)) {
             log.warn("Worker {} does not cover zone {}", workerId, zoneId);
@@ -176,7 +189,7 @@ public class WorkerService {
         log.info("Zone {} removed from worker {}", zoneId, workerId);
     }
 
-    private Worker getActiveWorkerOrThrow(Long id) {
+    private Worker getActiveWorkerOrThrow(UUID id) {
         Worker worker = getWorkerOrThrow(id);
         if (worker.getStatus() == WorkerStatus.PAUSED) {
             log.warn("Worker {} is paused and cannot be modified", id);

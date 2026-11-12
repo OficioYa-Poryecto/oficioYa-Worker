@@ -9,6 +9,7 @@ import lombok.Setter;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "availability_slots")
@@ -18,8 +19,8 @@ import java.time.LocalTime;
 public class AvailabilitySlot {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "worker_id", nullable = false)

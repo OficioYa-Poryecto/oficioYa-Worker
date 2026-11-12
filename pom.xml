@@ -36,6 +36,7 @@
 		<sonar.projectName>oficioya-worker</sonar.projectName>
 		<sonar.host.url>http://localhost:9000</sonar.host.url>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.coverage.exclusions>**/*MapperImpl.java,**/WorkerApplication.java</sonar.coverage.exclusions>
 	</properties>
 
 	<dependencies>
@@ -79,6 +80,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+
+		<!-- Cliente HTTP hacia otros dominios (Orquestador) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient</artifactId>
 		</dependency>
 
 		<!-- Pruebas de repositorio (@DataJpaTest) -->
@@ -131,6 +138,14 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Pruebas de clientes HTTP (MockRestServiceServer) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-restclient-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-test</artifactId>
@@ -193,6 +208,12 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<excludes>
+								<exclude>**/*MapperImpl.class</exclude>
+								<exclude>**/WorkerApplication.class</exclude>
+							</excludes>
+						</configuration>
 					</execution>
 					<execution>
 						<id>jacoco-check</id>
@@ -201,6 +222,10 @@
 							<goal>check</goal>
 						</goals>
 						<configuration>
+							<excludes>
+								<exclude>**/*MapperImpl.class</exclude>
+								<exclude>**/WorkerApplication.class</exclude>
+							</excludes>
 							<rules>
 								<rule>
 									<element>BUNDLE</element>

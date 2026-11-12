@@ -1,5 +1,6 @@
 package com.oficioya.worker.controller;
 
+import com.oficioya.worker.dto.TradeActiveRequest;
 import com.oficioya.worker.dto.TradeRequest;
 import com.oficioya.worker.dto.TradeResponse;
 import com.oficioya.worker.mapper.TradeDtoMapper;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/trades")
@@ -35,7 +37,7 @@ public class TradeController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener oficio por ID", description = "Devuelve un oficio según su identificador")
-    public ResponseEntity<TradeResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<TradeResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.findById(id)));
     }
 
@@ -52,15 +54,15 @@ public class TradeController {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar oficio", description = "Modifica los datos de un oficio")
-    public ResponseEntity<TradeResponse> update(@PathVariable Long id, @Valid @RequestBody TradeRequest request) {
+    public ResponseEntity<TradeResponse> update(@PathVariable UUID id, @Valid @RequestBody TradeRequest request) {
         return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.update(id, tradeDtoMapper.toModel(request))));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Desactivar oficio", description = "Inactiva el oficio; no se elimina físicamente")
-    public ResponseEntity<Void> deactivate(@PathVariable Long id) {
-        tradeService.deactivate(id);
-        return ResponseEntity.noContent().build();
+    @PutMapping("/{id}/active")
+    @Operation(summary = "Activar o desactivar oficio", description = "Cambia el estado del oficio; no se elimina físicamente")
+    public ResponseEntity<TradeResponse> setActive(@PathVariable UUID id,
+                                                @Valid @RequestBody TradeActiveRequest request) {
+        return ResponseEntity.ok(tradeDtoMapper.toResponse(tradeService.setActive(id, request.active())));
     }
 }

@@ -1,5 +1,7 @@
 package com.oficioya.worker.dto;
 
-public record TradeResponse(Long id, String name, String description, boolean active,
+import java.util.UUID;
+
+public record TradeResponse(UUID id, String name, String description, boolean active,
                             TradeCategoryResponse category) {
 }

@@ -5,10 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface WorkerTradeRepository extends JpaRepository<WorkerTrade, Long> {
+public interface WorkerTradeRepository extends JpaRepository<WorkerTrade, UUID> {
 
-    List<WorkerTrade> findByWorkerId(Long workerId);
+    List<WorkerTrade> findByWorkerId(UUID workerId);
 
-    Optional<WorkerTrade> findByWorkerIdAndPrimaryTrue(Long workerId);
+    Optional<WorkerTrade> findByWorkerIdAndPrimaryTrue(UUID workerId);
 }
