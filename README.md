@@ -1,1 +1,119 @@
 # oficioYa-Worker
+
+Microservicio del dominio **Worker** de OficioYa: catálogo de oficios y categorías, oficios del trabajador
+(principal y secundarios) con sus tarifas, zonas de cobertura, disponibilidad y galería de fotos.
+
+Stack: Java 21, Spring Boot 4, PostgreSQL (H2 en pruebas), Spring Security + JWT, MapStruct, springdoc (Swagger).
+
+## Variables de entorno
+
+La aplicación no trae credenciales en el código. Si falta una variable obligatoria, no arranca.
+
+| Variable | Obligatoria | Descripción | Ejemplo |
+|---|---|---|---|
+| `DB_URL` | Sí | URL JDBC de PostgreSQL | `jdbc:postgresql://localhost:5432/oficioya_worker` |
+| `DB_USER` | Sí | Usuario de la base de datos | `oficioya` |
+| `DB_PASSWORD` | Sí | Contraseña de la base de datos | — |
+| `JWT_SECRET` | Sí | Clave HS256 en **Base64** (mínimo 32 bytes ya decodificados). Debe ser **la misma que usa Identity** para firmar los tokens | — |
+| `PUBLIC_QUERIES` | No (`false`) | `true` permite los GET de consulta (catálogo, trabajadores, disponibilidad, fotos) sin token | `false` |
+
+Para desarrollo local, copia `.env.example` a `.env` (ignorado por git) y llénalo. Para generar una clave:
+
+```bash
+openssl rand -base64 48
+```
+
+En Azure, configúralas como *Application settings* del App Service (o secretos de Key Vault), nunca en el repositorio.
+
+Las pruebas usan el perfil `test` (`src/test/resources/application-test.properties`) con H2 y una clave de prueba,
+así que `./mvnw test` no necesita variables de entorno.
+
+## Ejecutar
+
+```bash
+# Linux/macOS (con las variables ya exportadas)
+./mvnw spring-boot:run
+
+# Windows PowerShell
+$env:DB_URL="jdbc:postgresql://localhost:5432/oficioya_worker"; $env:DB_USER="..."; $env:DB_PASSWORD="..."; $env:JWT_SECRET="..."
+./mvnw spring-boot:run
+```
+
+Swagger UI: `http://localhost:8082/swagger-ui.html` (público).
+
+## Seguridad
+
+- Autenticación con `Authorization: Bearer <token>`. Este servicio **no tiene login**: los tokens los emite Identity.
+- Claims usados: `sub` = UUID del usuario y `roles` = lista con `TRABAJADOR`, `CONTRATANTE` y/o `ADMIN`. Firma HS256 con el secreto en Base64.
+- Reglas:
+  - Solo `ADMIN` gestiona el catálogo de oficios y categorías.
+  - Cada `TRABAJADOR` solo modifica su propio perfil (oficios, tarifas, zonas, disponibilidad y fotos).
+  - Las consultas requieren estar autenticado (configurable con `PUBLIC_QUERIES`).
+- El perfil público del trabajador no expone correo ni teléfono.
+
+Todos los errores responden con el mismo formato:
+
+```json
+{ "timestamp": "2026-10-30T10:15:00", "status": 401, "error": "Unauthorized",
+  "message": "Token has expired", "path": "/api/v1/trades" }
+```
+
+| Código | Cuándo |
+|---|---|
+| 400 | Datos inválidos o JSON mal formado |
+| 401 | Sin token, o token inválido, expirado o con firma incorrecta |
+| 403 | Rol insuficiente o perfil ajeno |
+| 404 | Recurso no encontrado |
+| 409 | Regla de negocio incumplida (duplicados, trabajador pausado, franjas que se cruzan…) |
+
+## Pruebas
+
+```bash
+./mvnw clean test
+```
+
+### Cobertura (JaCoCo)
+
+```bash
+./mvnw clean verify
+```
+
+- El reporte queda en `target/site/jacoco/index.html` (HTML) y `target/site/jacoco/jacoco.xml` (el que lee SonarQube).
+- `verify` falla si la cobertura de líneas baja del 80%.
+- `lombok.config` evita que se cuente el código que genera Lombok.
+- **Exclusiones (documentadas):** `*MapperImpl` (código generado por MapStruct), `WorkerApplication` (solo arranca Spring, sin lógica) y el código generado por Lombok (marcado con `@Generated` en `lombok.config`).
+
+### Análisis con SonarQube (local)
+
+1. Levantar SonarQube con Docker (solo la primera vez):
+
+```powershell
+docker run -d --name sonarqube -p 9000:9000 -v sonarqube_data:/opt/sonarqube/data sonarqube:community
+```
+
+2. Entrar a http://localhost:9000 (usuario `admin`, contraseña `admin`; pide cambiarla en el primer ingreso).
+3. Crear el proyecto con **Create Project > Local project**. El **project key** debe ser exactamente `oficioya-worker`.
+4. Generar un token (**My Account > Security**) y guardarlo temporalmente en una variable de entorno de la terminal (se pierde al cerrarla, así que se repite en cada terminal nueva):
+
+```powershell
+$env:SONAR_TOKEN="TU_TOKEN"
+```
+
+5. Ejecutar el análisis desde la raíz del microservicio worker (donde está el `pom.xml`):
+
+```powershell
+.\mvnw clean verify sonar:sonar "-Dsonar.token=$env:SONAR_TOKEN"
+```
+
+6. Ver resultados en http://localhost:9000/dashboard?id=oficioya-worker.
+
+Notas:
+- Nunca subir el token al repositorio.
+- La cobertura sale vacía si no existe `target/site/jacoco/jacoco.xml`; por eso se usa `verify`, no solo `sonar:sonar`.
+- Si el puerto 9000 está ocupado, SonarQube no abre: liberar el puerto o detener el otro servicio.
+- El token solo dura mientras la terminal esté abierta; si el análisis falla por autenticación, volver a definir `SONAR_TOKEN`.
+
+> Si el proyecto está dentro de OneDrive, la sincronización puede corromper los `.class` de `target/` y producir
+> fallos intermitentes (`NoClassDefFoundError`, beans de mappers no encontrados). Excluye `target/` de la
+> sincronización o trabaja el proyecto fuera de OneDrive.
+
