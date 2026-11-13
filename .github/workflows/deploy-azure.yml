@@ -1,11 +1,12 @@
-# Despliega el back de Worker en Azure App Service (oficioya-worker-api) cada vez que hay push a develop.
+# Despliega el back de Worker en Azure App Service (oficioya-worker-api) cada vez que hay push a main (producción).
+# El flujo es: feature/* -> develop -> PR a main -> se despliega.
 # Autenticación sin contraseñas: GitHub entra a Azure con OIDC usando la identidad oficioya-worker-github.
 # Secretos del repo que necesita: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.
 name: Deploy Worker a Azure
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
