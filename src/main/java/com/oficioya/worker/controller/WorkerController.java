@@ -69,6 +69,14 @@ public class WorkerController {
                 workerService.findByUserId(UUID.fromString(authentication.getName()))));
     }
 
+    // Para servicios internos y administración: devuelve el perfil aunque esté pausado
+    @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
+    @GetMapping("/by-user/{userId}")
+    @Operation(summary = "Obtener perfil por usuario", description = "Devuelve el perfil del usuario indicado aunque esté pausado; 404 si no existe. Solo ADMIN y SERVICE")
+    public ResponseEntity<WorkerResponse> findByUserId(@PathVariable UUID userId) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.findByUserId(userId)));
+    }
+
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")
     @PutMapping("/{id}/availability-now")
     @Operation(summary = "Cambiar disponible ahora", description = "El trabajador marca si está disponible en este momento")
@@ -78,9 +86,9 @@ public class WorkerController {
                 workerService.setAvailableNow(id, request.availableNow())));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SERVICE')")
     @PutMapping("/{id}/status")
-    @Operation(summary = "Cambiar estado", description = "Pausa o reactiva al trabajador; solo ADMIN")
+    @Operation(summary = "Cambiar estado", description = "Pausa o reactiva al trabajador; solo ADMIN y SERVICE")
     public ResponseEntity<WorkerResponse> changeStatus(@PathVariable UUID id,
                                                     @Valid @RequestBody WorkerStatusRequest request) {
         return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.changeStatus(id, request.status())));
