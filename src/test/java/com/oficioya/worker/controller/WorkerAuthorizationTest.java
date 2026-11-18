@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -45,6 +46,7 @@ class WorkerAuthorizationTest {
     private static final String ADMIN_NAME = "a057fe75-2e5e-46c9-b7d9-afdf8f730110";
     private static final UUID DUENO = UUID.fromString(DUENO_NAME);
     private static final UUID CONTRATANTE = UUID.fromString(CONTRATANTE_NAME);
+    private static final UUID SERVICE_ID = UUID.fromString("5e2c1f0a-7b3d-4c9e-8a1f-2d6b9e4c7a10");
     private static final long ZONA = 5L;
 
     @Autowired
@@ -166,6 +168,99 @@ class WorkerAuthorizationTest {
     void contratanteConsultaPerfil() throws Exception {
         mockMvc.perform(get("/api/v1/workers/" + workerDelDueno))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("SERVICE obtiene el perfil por id de usuario aunque esté pausado: 200")
+    void serviceObtienePerfilPausadoPorUsuario() throws Exception {
+        Worker worker = workerRepository.findById(workerDelDueno).orElseThrow();
+        worker.setStatus(WorkerStatus.PAUSED);
+        workerRepository.save(worker);
+
+        mockMvc.perform(get("/api/v1/workers/by-user/" + DUENO)
+                        .header("Authorization", bearer(SERVICE_ID, "SERVICE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(workerDelDueno.toString()))
+                .andExpect(jsonPath("$.status").value("PAUSED"));
+    }
+
+    @Test
+    @DisplayName("ADMIN obtiene el perfil por id de usuario: 200")
+    void adminObtienePerfilPorUsuario() throws Exception {
+        mockMvc.perform(get("/api/v1/workers/by-user/" + DUENO)
+                        .header("Authorization", bearer(UUID.fromString(ADMIN_NAME), "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(DUENO.toString()));
+    }
+
+    @Test
+    @DisplayName("by-user responde 404 si el usuario no tiene perfil de trabajador")
+    void byUserSinPerfilDevuelve404() throws Exception {
+        mockMvc.perform(get("/api/v1/workers/by-user/" + CONTRATANTE)
+                        .header("Authorization", bearer(SERVICE_ID, "SERVICE")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Un trabajador no puede usar by-user, ni siquiera con su propio id: 403")
+    void trabajadorNoUsaByUser() throws Exception {
+        mockMvc.perform(get("/api/v1/workers/by-user/" + DUENO)
+                        .header("Authorization", bearer(DUENO, "TRABAJADOR")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("SERVICE puede pausar y reactivar un perfil: 200")
+    void servicePausaYReactiva() throws Exception {
+        mockMvc.perform(put("/api/v1/workers/" + workerDelDueno + "/status")
+                        .header("Authorization", bearer(SERVICE_ID, "SERVICE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": \"PAUSED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAUSED"));
+
+        mockMvc.perform(put("/api/v1/workers/" + workerDelDueno + "/status")
+                        .header("Authorization", bearer(SERVICE_ID, "SERVICE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": \"ACTIVE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("ADMIN puede pausar un perfil: 200")
+    void adminPausa() throws Exception {
+        mockMvc.perform(put("/api/v1/workers/" + workerDelDueno + "/status")
+                        .header("Authorization", bearer(UUID.fromString(ADMIN_NAME), "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": \"PAUSED\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Ni el trabajador dueño ni un contratante pueden cambiar el estado: 403 y sin cambios")
+    void trabajadorYContratanteNoCambianEstado() throws Exception {
+        mockMvc.perform(put("/api/v1/workers/" + workerDelDueno + "/status")
+                        .header("Authorization", bearer(DUENO, "TRABAJADOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": \"PAUSED\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/v1/workers/" + workerDelDueno + "/status")
+                        .header("Authorization", bearer(CONTRATANTE, "CONTRATANTE"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": \"PAUSED\"}"))
+                .andExpect(status().isForbidden());
+
+        assertEquals(WorkerStatus.ACTIVE, workerRepository.findById(workerDelDueno).orElseThrow().getStatus());
+    }
+
+    @Test
+    @DisplayName("GET /workers/me sigue siendo solo para TRABAJADOR: SERVICE recibe 403")
+    void serviceNoUsaMe() throws Exception {
+        mockMvc.perform(get("/api/v1/workers/me")
+                        .header("Authorization", bearer(DUENO, "SERVICE")))
+                .andExpect(status().isForbidden());
     }
 
     private String perfilJson() {
