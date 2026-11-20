@@ -18,12 +18,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.math.BigDecimal;
 import java.util.*;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 @RestController
 @RequestMapping("/api/v1/workers")
 @Tag(name = "Workers", description = "Operaciones relacionadas con trabajadores")
 public class WorkerController {
+
+    // Roles que pueden ver un perfil aunque esté pausado
+    private static final Set<String> PRIVILEGED_ROLES = Set.of("ROLE_ADMIN", "ROLE_SERVICE");
 
     private final WorkerService workerService;
     private final WorkerDtoMapper workerDtoMapper;
@@ -56,9 +61,11 @@ public class WorkerController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener trabajador por ID", description = "Devuelve un trabajador según su identificador")
-    public ResponseEntity<WorkerResponse> findById(@PathVariable UUID id) {
-        return ResponseEntity.ok(workerDtoMapper.toResponse(workerService.findById(id)));
+    @Operation(summary = "Obtener trabajador por ID",
+            description = "Devuelve un trabajador según su identificador; si está pausado responde 404, salvo para su dueño, ADMIN y SERVICE")
+    public ResponseEntity<WorkerResponse> findById(@PathVariable UUID id, Authentication authentication) {
+        return ResponseEntity.ok(workerDtoMapper.toResponse(
+                workerService.findVisibleById(id, requesterId(authentication), isPrivileged(authentication))));
     }
 
     @PreAuthorize("hasRole('TRABAJADOR')")
@@ -106,6 +113,27 @@ public class WorkerController {
     public ResponseEntity<Void> addZone(@PathVariable UUID id, @PathVariable Long zoneId) {
         workerService.addZone(id, zoneId);
         return ResponseEntity.noContent().build();
+    }
+
+    // Id del usuario del token; null si la petición es anónima (consultas públicas) o el nombre no es un UUID
+    private static UUID requesterId(Authentication authentication) {
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private static boolean isPrivileged(Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(PRIVILEGED_ROLES::contains);
     }
 
     @PreAuthorize("hasRole('TRABAJADOR') and @workerOwnership.isOwner(#id, authentication)")

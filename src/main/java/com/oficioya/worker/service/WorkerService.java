@@ -77,6 +77,18 @@ public class WorkerService {
         return buildModel(getWorkerOrThrow(id));
     }
 
+    // Perfil público: un perfil pausado solo lo ven su dueño y los roles privilegiados (ADMIN, SERVICE).
+    // Para los demás responde igual que si no existiera, así no se revela que el perfil está pausado.
+    public WorkerModel findVisibleById(UUID id, UUID requesterId, boolean privileged) {
+        Worker worker = getWorkerOrThrow(id);
+        boolean owner = requesterId != null && requesterId.equals(worker.getUserId());
+        if (worker.getStatus() == WorkerStatus.PAUSED && !owner && !privileged) {
+            log.debug("Worker {} is paused and hidden from requester {}", id, requesterId);
+            throw new ResourceNotFoundException("Worker not found: " + id);
+        }
+        return buildModel(worker);
+    }
+
     public WorkerModel findByUserId(UUID userId) {
         log.debug("Looking for worker profile of user: {}", userId);
         return buildModel(workerRepository.findByUserId(userId).orElseThrow(() -> {

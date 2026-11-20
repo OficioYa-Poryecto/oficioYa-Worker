@@ -185,6 +185,50 @@ class WorkerServiceTest {
     }
 
     @Test
+    @DisplayName("findVisibleById devuelve un perfil activo a cualquiera")
+    void visibleByIdReturnsActiveToAnyone() {
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE)));
+
+        assertEquals(WORKER_ID, workerService.findVisibleById(WORKER_ID, null, false).getId());
+    }
+
+    @Test
+    @DisplayName("findVisibleById oculta un perfil pausado a otros usuarios: ResourceNotFoundException")
+    void visibleByIdHidesPausedFromOthers() {
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> workerService.findVisibleById(WORKER_ID, OTHER_USER_ID, false));
+        assertThrows(ResourceNotFoundException.class,
+                () -> workerService.findVisibleById(WORKER_ID, null, false));
+    }
+
+    @Test
+    @DisplayName("findVisibleById muestra un perfil pausado a su dueño")
+    void visibleByIdShowsPausedToOwner() {
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
+
+        assertEquals(WorkerStatus.PAUSED, workerService.findVisibleById(WORKER_ID, USER_ID, false).getStatus());
+    }
+
+    @Test
+    @DisplayName("findVisibleById muestra un perfil pausado a un rol privilegiado")
+    void visibleByIdShowsPausedToPrivileged() {
+        when(workerRepository.findById(WORKER_ID)).thenReturn(Optional.of(worker(WORKER_ID, USER_ID, WorkerStatus.PAUSED)));
+
+        assertEquals(WorkerStatus.PAUSED, workerService.findVisibleById(WORKER_ID, OTHER_USER_ID, true).getStatus());
+    }
+
+    @Test
+    @DisplayName("findVisibleById lanza ResourceNotFoundException si el trabajador no existe")
+    void visibleByIdFailsWhenNotFound() {
+        when(workerRepository.findById(UNKNOWN_WORKER_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> workerService.findVisibleById(UNKNOWN_WORKER_ID, USER_ID, true));
+    }
+
+    @Test
     @DisplayName("La búsqueda filtra por zona, disponibilidad, oficio y tarifa máxima")
     void shouldSearchWithFilters() {
         Worker barato = worker(WORKER_ID, USER_ID, WorkerStatus.ACTIVE);

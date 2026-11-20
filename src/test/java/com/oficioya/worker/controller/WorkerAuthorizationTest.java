@@ -263,6 +263,60 @@ class WorkerAuthorizationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @DisplayName("Un contratante no ve el perfil público de un trabajador pausado: 404")
+    void contratanteNoVePerfilPausado() throws Exception {
+        pausarPerfilDelDueno();
+
+        mockMvc.perform(get("/api/v1/workers/" + workerDelDueno)
+                        .header("Authorization", bearer(CONTRATANTE, "CONTRATANTE")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("El dueño, ADMIN y SERVICE sí ven un perfil pausado: 200")
+    void duenoAdminYServiceVenPerfilPausado() throws Exception {
+        pausarPerfilDelDueno();
+
+        mockMvc.perform(get("/api/v1/workers/" + workerDelDueno)
+                        .header("Authorization", bearer(DUENO, "TRABAJADOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAUSED"));
+        mockMvc.perform(get("/api/v1/workers/" + workerDelDueno)
+                        .header("Authorization", bearer(UUID.fromString(ADMIN_NAME), "ADMIN")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/workers/" + workerDelDueno)
+                        .header("Authorization", bearer(SERVICE_ID, "SERVICE")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = DUENO_NAME, roles = "TRABAJADOR")
+    @DisplayName("El dueño puede registrar una foto con la ruta relativa del servicio de imágenes: 201")
+    void registraFotoConRutaRelativa() throws Exception {
+        mockMvc.perform(post("/api/v1/workers/" + workerDelDueno + "/photos").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"/api/v1/images/3f2b8c1e-9a4d-4e7f-b6c2-1d5e8f9a0b3c\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.url").value("/api/v1/images/3f2b8c1e-9a4d-4e7f-b6c2-1d5e8f9a0b3c"));
+    }
+
+    @Test
+    @WithMockUser(username = DUENO_NAME, roles = "TRABAJADOR")
+    @DisplayName("Rechaza rutas relativas que no son del servicio de imágenes: 400")
+    void rechazaRutaRelativaAjena() throws Exception {
+        mockMvc.perform(post("/api/v1/workers/" + workerDelDueno + "/photos").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"/otra/ruta/foto.jpg\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private void pausarPerfilDelDueno() {
+        Worker worker = workerRepository.findById(workerDelDueno).orElseThrow();
+        worker.setStatus(WorkerStatus.PAUSED);
+        workerRepository.save(worker);
+    }
+
     private String perfilJson() {
         return """
                 {"availableNow": false, "zoneIds": [%d],
